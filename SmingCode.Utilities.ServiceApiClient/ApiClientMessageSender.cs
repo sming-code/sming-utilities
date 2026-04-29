@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using Microsoft.Extensions.Logging;
 
 namespace SmingCode.Utilities.ServiceApiClient;
+using Config;
 
 internal class ApiClientMessageSender<TBody, TResponse>(
     ILogger<ApiClientMessageSender<TBody, TResponse>> _logger

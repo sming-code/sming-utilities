@@ -8,7 +8,6 @@ public static class Configuration
 {
     private static bool _serviceInitializerInjected = false;
     private const int DEFAULT_TIMEOUT_SECONDS = 60;
-    private static readonly List<MiddlewareDetail> _middlewareDetails = [];
 
     public static IServiceCollection AddApiClient<TInterface, TService>(
         this IServiceCollection services,
@@ -51,7 +50,6 @@ public static class Configuration
         });
         services.AddScoped<TInterface, TService>();
         services.TryAddScoped(typeof(ApiClientMessageSender<,>));
-        services.AddSingleton(_middlewareDetails);
 
         return services;
     }
@@ -61,7 +59,6 @@ public static class Configuration
     )
     {
         services.AddSingleton(new MiddlewareDetail(typeof(TImplementation)));
-        _middlewareDetails.Add(new(typeof(TImplementation)));
 
         return services;
     }

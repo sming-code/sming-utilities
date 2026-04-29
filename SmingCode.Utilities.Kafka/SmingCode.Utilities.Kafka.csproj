@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\SmingCode.Utilities.DelegateInvokers\SmingCode.Utilities.DelegateInvokers.csproj" />
     <ProjectReference Include="..\SmingCode.Utilities.ServiceMetadata\SmingCode.Utilities.ServiceMetadata.csproj" />
+    <ProjectReference Include="..\SmingCode.Utilities.StartupProcesses\SmingCode.Utilities.StartupProcesses.csproj" />
   </ItemGroup>
 
   <ItemGroup>

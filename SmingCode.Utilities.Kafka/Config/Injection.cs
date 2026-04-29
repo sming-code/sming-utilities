@@ -1,11 +1,10 @@
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using SmingCode.Utilities.Kafka.Consumers;
-using SmingCode.Utilities.Kafka.Producers;
-using SmingCode.Utilities.ServiceMetadata;
 
-namespace SmingCode.Utilities.Kafka;
+namespace SmingCode.Utilities.Kafka.Config;
+using Consumers;
+using Producers;
+using SmingCode.Utilities.StartupProcesses;
 
 public static class Injection
 {
@@ -51,10 +50,34 @@ public static class Injection
         services.AddSingleton<IAdminClientProvider, AdminClientProvider>();
         services.AddSingleton<ITopicManager, TopicManager>();
         services.AddScoped<IKafkaProducer, KafkaProducer>();
+
+        services.AddSingleton<ProducerMiddlewareHandler>();
+        services.AddScoped<IServiceInitializer, KafkaProducerMiddlewareInitialization>();
+
         if (includeConsumers)
         {
             services.AddHostedService<KafkaHostedService>();
+            services.AddSingleton<ConsumerMiddlewareHandler>();
+            services.AddScoped<IServiceInitializer, KafkaConsumerMiddlewareInitialization>();
         }
+
+        return services;
+    }
+
+    public static IServiceCollection AddKafkaConsumerMiddleware<TImplementation>(
+        this IServiceCollection services
+    )
+    {
+        services.AddSingleton(new ConsumerMiddlewareDetail(typeof(TImplementation)));
+
+        return services;
+    }
+
+    public static IServiceCollection AddKafkaProducerMiddleware<TImplementation>(
+        this IServiceCollection services
+    )
+    {
+        services.AddSingleton(new ProducerMiddlewareDetail(typeof(TImplementation)));
 
         return services;
     }

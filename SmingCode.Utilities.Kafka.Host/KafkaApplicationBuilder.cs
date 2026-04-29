@@ -1,12 +1,10 @@
-using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Diagnostics.Metrics;
 using Microsoft.Extensions.Hosting;
 
 namespace SmingCode.Utilities.Kafka.Host;
+using Config;
 using Consumers;
-using Microsoft.Extensions.DependencyInjection.Extensions;
-using Producers;
 using ServiceMetadata;
 
 public class KafkaApplicationBuilder(
