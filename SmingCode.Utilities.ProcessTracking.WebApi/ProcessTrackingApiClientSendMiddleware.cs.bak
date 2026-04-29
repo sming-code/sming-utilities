@@ -4,13 +4,13 @@ namespace SmingCode.Utilities.ProcessTracking.WebApi;
 using ServiceApiClient;
 
 internal class ProcessTrackingApiClientSendMiddleware(
-    SendDelegate sendDelegate,
+    IProcessTrackingHandler _processTrackingHandler,
     ILogger<ProcessTrackingApiClientSendMiddleware> _logger
-)
+) : IApiClientSendMiddleware
 {
-    public async Task HandleAsync(
-        ApiClientSendContext context,
-        IProcessTrackingHandler _processTrackingHandler
+    public async Task<TResponse> HandleAsync<TBody, TResponse>(
+        ApiClientSendContext<TBody, TResponse> context,
+        IApiClientSendDelegateHandler<TBody, TResponse> apiClientSendDelegate
     )
     {
         var currentProcessTags = _processTrackingHandler.ProcessTags;
@@ -33,6 +33,6 @@ internal class ProcessTrackingApiClientSendMiddleware(
             context.MessageHeaders.Add(processTag.Key, processTag.Value.ToString()!);
         }
 
-        await sendDelegate(context);
+        return await apiClientSendDelegate.Next(context);
     }
 }

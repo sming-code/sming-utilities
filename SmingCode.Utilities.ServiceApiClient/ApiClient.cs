@@ -1,5 +1,4 @@
-using System.Net.Http.Json;
-using System.Runtime.CompilerServices;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace SmingCode.Utilities.ServiceApiClient;
@@ -7,17 +6,25 @@ namespace SmingCode.Utilities.ServiceApiClient;
 internal class ApiClient<TService>(
     HttpClient _httpClient,
     ApiClientConfiguration<TService> _apiClientConfiguration,
-    IEnumerable<IApiClientSendMiddleware> _apiClientSendMiddlewares,
+    MiddlewareHandler _middlewareHandler,
     IServiceProvider _serviceProvider,
     ILogger<ApiClient<TService>> _logger
 ) : IServiceApiClient<TService> where TService : class
 {
-    private const string TRACE_TYPE = "Service Api Client";
+    private static ApiClientConfiguration? _clientConfiguration;
+    private static readonly NoResponse _noResponse = new();
+    private ApiClientConfiguration ClientConfiguration
+        => _clientConfiguration ??= new(
+            _apiClientConfiguration.ServiceDisplayName,
+            _apiClientConfiguration.ServiceName,
+            _apiClientConfiguration.JsonSerializerOptions
+        );
+
     public HttpClient HttpClient => _httpClient;
 
     public async Task Post(
         string relativeUrl
-    ) => await ProcessSendAndCheckSuccessfulResponse<NoResponse>(
+    ) => await Send<NoResponse>(
         HttpMethod.Post,
         relativeUrl
     );
@@ -27,7 +34,7 @@ internal class ApiClient<TService>(
         TRequest request,
         HeaderEntryCollection? headers = null
     ) where TRequest : notnull where TResult : notnull
-        => await ProcessSendAndCheckSuccessfulResponse<TRequest, TResult>(
+        => await Send<TRequest, TResult>(
             HttpMethod.Post,
             relativeUrl,
             request,
@@ -37,193 +44,102 @@ internal class ApiClient<TService>(
     public async Task<TResponse> Get<TResponse>(
         string relativeUrl
     ) where TResponse : notnull
-        => await ProcessSendAndCheckSuccessfulResponse<TResponse>(
+        => await Send<TResponse>(
             HttpMethod.Get,
             relativeUrl
         );
 
-    private async Task<TResponse> ProcessSendAndCheckSuccessfulResponse<TResponse>(
+    private async Task Send(
         HttpMethod httpMethod,
-        string targetUrl,
+        string relativeUrl,
+        HeaderEntryCollection? messageHeaders = null
+    ) => await CallPipeline<NoBody, NoResponse>(
+        httpMethod,
+        relativeUrl,
+        new NoBody(),
+        messageHeaders
+    );
+
+    private async Task Send<TBody>(
+        HttpMethod httpMethod,
+        string relativeUrl,
+        TBody body,
+        HeaderEntryCollection? messageHeaders = null
+    ) where TBody : notnull
+        => await CallPipeline<TBody, NoResponse>(
+            httpMethod,
+            relativeUrl,
+            body,
+            messageHeaders
+        );
+
+    private async Task<TResponse> Send<TResponse>(
+        HttpMethod httpMethod,
+        string relativeUrl,
         HeaderEntryCollection? messageHeaders = null
     ) where TResponse : notnull
-        => await ProcessSendAndCheckSuccessfulResponse<NoBody, TResponse>(
+    {
+        var resultantContext = await CallPipeline<NoBody, TResponse>(
             httpMethod,
-            targetUrl,
+            relativeUrl,
             new NoBody(),
             messageHeaders
         );
 
-    private async Task<TResponse> ProcessSendAndCheckSuccessfulResponse<TBody, TResponse>(
+        return resultantContext is TResponse response
+            ? response
+            : throw new InvalidCastException(
+                "Just plain failed"
+            );
+    }
+
+    private async Task<TResponse> Send<TBody, TResponse>(
         HttpMethod httpMethod,
-        string targetUrl,
+        string relativeUrl,
         TBody body,
         HeaderEntryCollection? messageHeaders = null
     ) where TBody : notnull where TResponse : notnull
     {
-        var apiClientSendContext = new ApiClientSendContext<TBody, TResponse>(
+        var resultantContext = await CallPipeline<TBody, TResponse>(
             httpMethod,
-            targetUrl,
+            relativeUrl,
             body,
+            messageHeaders
+        );
+
+        return resultantContext is TResponse response
+            ? response
+            : throw new InvalidCastException(
+                "Just plain failed"
+            );
+    }
+
+    private async Task<ApiClientSendContext> CallPipeline<TBody, TResponse>(
+        HttpMethod httpMethod,
+        string relativeUrl,
+        TBody body,
+        HeaderEntryCollection? messageHeaders = null
+    ) where TBody : notnull where TResponse : notnull
+    {
+        var messageSender = _serviceProvider.GetRequiredService<ApiClientMessageSender<TBody, TResponse>>();
+
+        var context = new ApiClientSendContext(
+            _httpClient,
+            ClientConfiguration,
+            messageSender.HandleAsync,
+            httpMethod,
+            GetFullUri(relativeUrl),
+            body,
+            typeof(TBody),
+            typeof(TResponse),
             messageHeaders ?? [],
             _serviceProvider
         );
 
-        var sendDelegate = new ApiClientSendDelegate<TBody, TResponse>(async (apiClientSendContext) =>
-        {
-            var response = await SendAndCheckSuccessfulResponse<TResponse>(
-                apiClientSendContext.HttpMethod,
-                apiClientSendContext.TargetUrl,
-                apiClientSendContext.MessageHeaders,
-                typeof(TBody) == typeof(NoBody)
-                    ? null
-                    : new RequestBody<TBody>(
-                        apiClientSendContext.Body,
-                        _apiClientConfiguration.JsonSerializerOptions
-                    )
-            );
-
-            return response;
-        });
-
-        foreach (var apiClientSendMiddleware in _apiClientSendMiddlewares.Reverse())
-        {
-            var newDelegateHandler = new ApiClientSendDelegateHandler<TBody, TResponse>(
-                sendDelegate
-            );
-
-            sendDelegate = new ApiClientSendDelegate<TBody, TResponse>(async (apiClientSendContext) =>
-                await apiClientSendMiddleware.HandleAsync(
-                    apiClientSendContext,
-                    newDelegateHandler
-                )
-            );
-        }
-
-        return await sendDelegate(apiClientSendContext);
-    }
-
-    private async Task<TResponse> SendAndCheckSuccessfulResponse<TResponse>(
-        HttpMethod httpMethod,
-        string relativeUrl,
-        HeaderEntryCollection? headers = null,
-        IHttpRequestMessageBodyDetail? bodyDetail = null
-    ) where TResponse : notnull
-    {
-        var fullUri = GetFullUri(relativeUrl);
-
-        HttpRequestMessageDetail requestMessageDetail = new(
-            httpMethod,
-            fullUri,
-            headers,
-            bodyDetail
-        );
-        LogOutgoingRequest(requestMessageDetail);
-
-        try
-        {
-            var response = await _httpClient.SendAsync(requestMessageDetail.HttpRequestMessage);
-            await CheckAndLogResponse(fullUri, response);
-
-            return typeof(TResponse) == typeof(NoResponse)
-                ? (TResponse)Convert.ChangeType(new NoResponse(), typeof(TResponse))
-                : await response.Content.ReadFromJsonAsync<TResponse>()
-                    ?? throw new ServiceApiClientException(
-                        _apiClientConfiguration.ServiceDisplayName,
-                        $"Could not convert api response into the required type - {typeof(TResponse).Name}."
-                    );
-        }
-        catch (ServiceApiClientException)
-        {
-            throw;
-        }
-        catch (Exception ex)
-        {
-            LogHttpClientCallException(ex, fullUri);
-
-            throw new ServiceApiClientException(
-                _apiClientConfiguration.ServiceDisplayName,
-                $"Unable to process call to {fullUri}",
-                ex
-            );
-        }
+        await _middlewareHandler.RunPipeline(context);
+        return context;
     }
 
     private string GetFullUri(string relativeUrl)
         => $"{HttpClient.BaseAddress}{relativeUrl.TrimStart('/')}";
-
-    private void LogOutgoingRequest(HttpRequestMessageDetail requestMessageDetail)
-    {
-        if (_logger.IsEnabled(LogLevel.Trace))
-        {
-            _logger.LogTrace(
-                "Service Api Client targeting service {TargetServiceName} sending request {RequestDetail} - {TraceType}",
-                _apiClientConfiguration.ServiceDisplayName,
-                requestMessageDetail.LogDetail,
-                TRACE_TYPE
-            );
-        }
-    }
-
-    private async Task CheckAndLogResponse(
-        string targetUrl,
-        HttpResponseMessage responseMessage,
-        bool throwIfUnsuccessful = true
-    )
-    {
-        if (!responseMessage.IsSuccessStatusCode)
-        {
-            var responseContent = await responseMessage.Content.ReadAsStringAsync();
-            _logger.LogError(
-                "Service Api Client targeting service {TargetServiceName} received unsuccessful response ({StatusCode}) with details: {ResponseContent} - {TraceType}",
-                _apiClientConfiguration.ServiceDisplayName,
-                responseMessage.StatusCode,
-                responseContent,
-                TRACE_TYPE
-            );
-
-            if (throwIfUnsuccessful)
-            {
-                throw new ServiceApiClientException(
-                    _apiClientConfiguration.ServiceDisplayName,
-                    $"Service Api Client targeting service {_apiClientConfiguration.ServiceDisplayName} received unsuccessful response ({responseMessage.StatusCode}) for call to {targetUrl}.",
-                    _responseMessage: responseMessage
-                );
-            }
-        }
-        else if (_logger.IsEnabled(LogLevel.Trace))
-        {
-            var responseContent = await responseMessage.Content.ReadAsStringAsync();
-
-            var responseDetails = new
-            {
-                StatusCode = responseMessage.StatusCode.ToString(),
-                Headers = responseMessage.Headers.Select(header =>
-                    $"{header.Key}: {string.Join(';', header.Value)}"
-                ).ToList(),
-                Content = responseContent
-            };
-
-            _logger.LogTrace(
-                "Service Api Client targeting service {TargetServiceName} received response with details: {ResponseDetails} - {TraceType}",
-                _apiClientConfiguration.ServiceDisplayName,
-                responseDetails,
-                TRACE_TYPE
-            );
-        }
-    }
-
-    private void LogHttpClientCallException(
-        Exception ex,
-        string fullUri
-    )
-    {
-        _logger.LogError(
-            ex,
-            "Service Api Client targeting service {TargetServiceName} at url {TargetUrl} failed - {TraceType}",
-            _apiClientConfiguration.ServiceDisplayName,
-            fullUri,
-            TRACE_TYPE
-        );
-    }
 }
