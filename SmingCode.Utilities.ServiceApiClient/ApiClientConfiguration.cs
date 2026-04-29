@@ -9,3 +9,9 @@ internal record ApiClientConfiguration<TService>(
 {
     internal JsonSerializerOptions JsonSerializerOptions { get; } = JsonSerializerOptions.Web;
 };
+
+internal record ApiClientConfiguration(
+    string ServiceDisplayName,
+    string ServiceName,
+    JsonSerializerOptions JsonSerializerOptions
+);

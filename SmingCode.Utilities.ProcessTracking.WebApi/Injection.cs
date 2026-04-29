@@ -1,7 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 
 namespace SmingCode.Utilities.ProcessTracking.WebApi;
-using ServiceApiClient;
+using ServiceApiClient.Config;
 using StartupProcesses;
 
 public static class Injection
@@ -12,7 +12,7 @@ public static class Injection
     {
         var services = ((IProcessTrackingBuilderInternal)builder).Services;
         services.AddScoped<IServiceInitializer, ProcessTrackingInitialization>();
-        services.AddScoped<IApiClientSendMiddleware, ProcessTrackingApiClientSendMiddleware>();
+        services.AddApiClientMiddleware<ProcessTrackingApiClientSendMiddleware>();
 
         return new ValidProcessTrackingBuilder(services);
     }
