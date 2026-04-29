@@ -2,14 +2,14 @@ namespace SmingCode.Utilities.Kafka.Producers;
 
 internal class KafkaProducer(
     KafkaServerOptions _kafkaServerOptions,
-    IEnumerable<IKafkaProducerMiddleware> _kafkaProducerMiddlewares,
+    ProducerMiddlewareHandler _producerMiddlewareHandler,
     IServiceProvider _serviceProvider
 ) : IKafkaProducer
 {
     public async Task<bool> SendEvent<TValue>(
         string topic,
         TValue value
-    ) => await ProcessKafkaEvent<Null, TValue>(
+    ) where TValue : notnull => await ProcessKafkaEvent<Null, TValue>(
         topic,
         null,
         value
@@ -19,7 +19,7 @@ internal class KafkaProducer(
         string topic,
         TKey key,
         TValue value
-    ) => await ProcessKafkaEvent(
+    ) where TValue : notnull => await ProcessKafkaEvent(
         topic,
         key,
         value
@@ -29,7 +29,7 @@ internal class KafkaProducer(
         string topic,
         TValue value,
         Headers headers
-    ) => await ProcessKafkaEvent<Null, TValue>(
+    ) where TValue : notnull => await ProcessKafkaEvent<Null, TValue>(
         topic,
         null,
         value,
@@ -41,7 +41,7 @@ internal class KafkaProducer(
         TKey key,
         TValue value,
         Headers headers
-    ) => await ProcessKafkaEvent(
+    ) where TValue : notnull => await ProcessKafkaEvent(
         topic,
         key,
         value,
@@ -53,55 +53,44 @@ internal class KafkaProducer(
         TKey? key,
         TValue value,
         Headers? headers = null
-    )
+    ) where TValue : notnull
     {
-        var kafkaProducerContext = new KafkaProducerContext<TKey, TValue>(
-            topic,
-            key,
-            value,
-            headers ?? [],
-            _serviceProvider
-        ).AddHeader("message-identifier", Guid.NewGuid().ToString());
 
-        var produceDelegate = new KafkaProducerDelegate<TKey, TValue>(async (kafkaProducerContext) =>
+        Func<KafkaProducerContext, Task<bool>> produceDelegate = async (context) =>
         {
             using var producer = BuildProducer<TKey, TValue>();
             
             var message = new Message<TKey, TValue>
             {
-                Value = kafkaProducerContext.Value,
-                Headers = kafkaProducerContext.Headers
+                Value = (TValue)context.Value,
+                Headers = context.Headers
             };
 
-            if (typeof(TKey) != typeof(Null) && kafkaProducerContext.HasKey)
+            if (typeof(TKey) != typeof(Null) && context.HasKey)
             {
-                message.Key = kafkaProducerContext.Key;
+                message.Key = (TKey)context.Key;
             }
 
             var deliveryResult = await producer.ProduceAsync(
-                kafkaProducerContext.Topic,
+                context.Topic,
                 message
             );
 
             return deliveryResult.Status == PersistenceStatus.Persisted;
-        });
+        };
 
-        foreach (var kafkaProducerMiddleware in _kafkaProducerMiddlewares.Reverse())
-        {
-            var newDelegateHandler = new KafkaProducerDelegateHandler<TKey, TValue>(
-                produceDelegate
-            );
+        var kafkaProducerContext = new KafkaProducerContext(
+            topic,
+            key,
+            typeof(TKey),
+            value,
+            typeof(TValue),
+            headers ?? [],
+            produceDelegate,
+            _serviceProvider
+        ).AddHeader("message-identifier", Guid.NewGuid().ToString());
 
-            produceDelegate = new KafkaProducerDelegate<TKey, TValue>(async (kafkaProducerContext) =>
-                await kafkaProducerMiddleware.HandleAsync(
-                    kafkaProducerContext,
-                    newDelegateHandler
-                )
-            );
-        }
-
-        var result = await produceDelegate(kafkaProducerContext);
-        return result;
+        return await _producerMiddlewareHandler.RunPipeline(kafkaProducerContext);
     }
 
     private IProducer<TKey, TValue> BuildProducer<TKey, TValue>()

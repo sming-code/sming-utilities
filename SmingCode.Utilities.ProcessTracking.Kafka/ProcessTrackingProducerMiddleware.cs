@@ -1,31 +1,32 @@
 using Microsoft.Extensions.Logging;
 
 namespace SmingCode.Utilities.ProcessTracking.Kafka;
+using Config;
 using Utilities.Kafka.Producers;
 
 internal class ProcessTrackingProducerMiddleware(
+    ProducerDelegate producerDelegate,
     ILogger<ProcessTrackingProducerMiddleware> _logger
-) : IKafkaProducerMiddleware
+)
 {
-    public async Task<bool> HandleAsync<TKey, TValue>(
-        IKafkaProducerContext<TKey, TValue> context,
-        IKafkaProducerDelegateHandler<TKey, TValue> kafkaProduceDelegateHandler
+    public async Task<bool> HandleAsync(
+        KafkaProducerContext context,
+        IProcessTrackingHandler processTrackingHandler
     )
     {
-        var processTrackingHandler = context.ServiceProvider
-            .GetRequiredService<IProcessTrackingHandler>();
         var processTrackingTags = processTrackingHandler.ProcessTags;
 
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
-                "Process tags being added to outgoing kafka message: {ProcessTagsRequired}",
+                "Process tags being added to outgoing kafka message: {ProcessTagsRequired} - {TraceType}",
                 string.Join(
                     ",",
                     processTrackingTags.Select(tag =>
                         $"{tag.Key}:{tag.Value}"
                     )
-                )
+                ),
+                Constants.CONSUMER_MIDDLEWARE_UTILITY_TRACE_TYPE
             );
         }
         
@@ -34,10 +35,8 @@ internal class ProcessTrackingProducerMiddleware(
             context.AddHeader(tag.Key, tag.Value.ToString()!);
         }
 
-        var result = await kafkaProduceDelegateHandler.Next(
+        return await producerDelegate(
             context
         );
-
-        return result;
     }
 }

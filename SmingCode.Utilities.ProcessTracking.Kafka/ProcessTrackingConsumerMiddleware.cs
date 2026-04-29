@@ -2,26 +2,28 @@ using System.Text;
 using Microsoft.Extensions.Logging;
 
 namespace SmingCode.Utilities.ProcessTracking.Kafka;
+
+using System.Text.Json;
+using Config;
 using ServiceMetadata;
 using Utilities.Kafka.Consumers;
 
 internal class ProcessTrackingConsumerMiddleware(
-    IServiceMetadataProvider serviceMetadataProvider,
+    ConsumeDelegate consumeDelegate,
     ILogger<ProcessTrackingConsumerMiddleware> _logger
-) : IKafkaConsumerMiddleware
+)
 {
-    public async Task<KafkaEventResult> HandleAsync<TKey, TValue>(
-        KafkaConsumerContext<TKey, TValue> context,
-        IKafkaConsumeDelegateHandler<TKey, TValue> kafkaConsumeDelegateHandler
+    public async Task<KafkaEventResult> HandleAsync(
+        KafkaConsumerContext context,
+        IProcessTrackingHandler processTrackingHandler,
+        IServiceMetadataProvider serviceMetadataProvider
     )
     {
-        var messageHeaders = context.ConsumeResult.Message.Headers
+        var messageHeaders = context.Headers
             .ToDictionary(
                 header => header.Key,
                 header => Encoding.UTF8.GetString(header.GetValueBytes())
             );
-
-        var processTrackingHandler = context.ServiceProvider.GetRequiredService<IProcessTrackingHandler>();
 
         if (!processTrackingHandler.TryLoadProcessDetailFromIncomingTags(
             messageHeaders.ToDictionary(
@@ -32,7 +34,9 @@ internal class ProcessTrackingConsumerMiddleware(
         ))
         {
             _logger.LogError(
-                "Unable to load process tracking headers. Marking message as unprocessed"
+                "Unable to load process tracking headers. Incoming headers were {IncomingHeaders} - {TraceType}",
+                JsonSerializer.Serialize(context.Headers),
+                Constants.CONSUMER_MIDDLEWARE_UTILITY_TRACE_TYPE
             );
 
             return KafkaEventResult.Incomplete;
@@ -46,14 +50,16 @@ internal class ProcessTrackingConsumerMiddleware(
         if (_logger.IsEnabled(LogLevel.Information))
         {
             _logger.LogInformation(
+                "Process tracking details loaded from incoming message headers - {TraceType}",
+                Constants.CONSUMER_MIDDLEWARE_UTILITY_TRACE_TYPE
+            );
+            _logger.LogInformation(
                 "Process tracking details loaded from incoming message headers."
             );
         }
 
-        var result = await kafkaConsumeDelegateHandler.Next(
+        return await consumeDelegate(
             context
         );
-
-        return result;
     }
 }
