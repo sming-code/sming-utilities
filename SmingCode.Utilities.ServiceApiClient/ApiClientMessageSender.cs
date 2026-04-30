@@ -44,7 +44,7 @@ internal class ApiClientMessageSender<TBody, TResponse>(
         }
         catch (Exception ex)
         {
-            LogHttpClientCallException(ex, context.TargetUrl, serviceDisplayName);
+            LogHttpClientCallException(ex, context.TargetUrl, context.HttpMethod, serviceDisplayName);
 
             throw new ServiceApiClientException(
                 context.ApiClientConfiguration.ServiceDisplayName,
@@ -62,10 +62,10 @@ internal class ApiClientMessageSender<TBody, TResponse>(
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace(
-                "Service Api Client targeting service {TargetServiceName} sending request {RequestDetail} - {TraceType}",
-                serviceDisplayName,
+                "Middleware processing complete - sending request {RequestDetail} - {TraceType} - {TargetServiceName}",
                 requestMessageDetail.LogDetail,
-                Constants.UTILITY_TRACE_TYPE
+                Constants.UTILITY_TRACE_TYPE,
+                serviceDisplayName
             );
         }
     }
@@ -81,11 +81,11 @@ internal class ApiClientMessageSender<TBody, TResponse>(
         {
             var responseContent = await responseMessage.Content.ReadAsStringAsync();
             _logger.LogError(
-                "Service Api Client targeting service {TargetServiceName} received unsuccessful response ({StatusCode}) with details: {ResponseContent} - {TraceType}",
-                serviceDisplayName,
+                "Received unsuccessful response ({StatusCode}) with details: {ResponseContent} - {TraceType} - {TargetServiceName}",
                 responseMessage.StatusCode,
                 responseContent,
-                Constants.UTILITY_TRACE_TYPE
+                Constants.UTILITY_TRACE_TYPE,
+                serviceDisplayName
             );
 
             if (throwIfUnsuccessful)
@@ -111,10 +111,10 @@ internal class ApiClientMessageSender<TBody, TResponse>(
             };
 
             _logger.LogTrace(
-                "Service Api Client targeting service {TargetServiceName} received response with details: {ResponseDetails} - {TraceType}",
-                serviceDisplayName,
+                "Received response with details: {ResponseDetails} - {TraceType} - {TargetServiceName}",
                 responseDetails,
-                Constants.UTILITY_TRACE_TYPE
+                Constants.UTILITY_TRACE_TYPE,
+                serviceDisplayName
             );
         }
     }
@@ -122,15 +122,17 @@ internal class ApiClientMessageSender<TBody, TResponse>(
     private void LogHttpClientCallException(
         Exception ex,
         string fullUri,
+        HttpMethod httpMethod,
         string serviceDisplayName
     )
     {
         _logger.LogError(
             ex,
-            "Service Api Client targeting service {TargetServiceName} at url {TargetUrl} failed - {TraceType}",
-            serviceDisplayName,
+            "Attempt to call url {TargetUrl} ({HttpMethod}) failed - {TraceType} - {TargetServiceName}",
             fullUri,
-            Constants.UTILITY_TRACE_TYPE
+            httpMethod,
+            Constants.UTILITY_TRACE_TYPE,
+            serviceDisplayName
         );
     }
 }

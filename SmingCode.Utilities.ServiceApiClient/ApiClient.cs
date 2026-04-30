@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
 namespace SmingCode.Utilities.ServiceApiClient;
+using Config;
 
 internal class ApiClient<TService>(
     HttpClient _httpClient,
@@ -121,6 +122,19 @@ internal class ApiClient<TService>(
         HeaderEntryCollection? messageHeaders = null
     ) where TBody : notnull where TResponse : notnull
     {
+        var fullUri = GetFullUri(relativeUrl);
+
+        if (_logger.IsEnabled(LogLevel.Trace))
+        {
+            _logger.LogTrace(
+                "Processing call to {TargetUrl} ({HttpMethod}) - {TraceType} - {TargetServiceName}",
+                fullUri,
+                httpMethod,
+                Constants.UTILITY_TRACE_TYPE,
+                ClientConfiguration.ServiceDisplayName
+            );
+        }
+        
         var messageSender = _serviceProvider.GetRequiredService<ApiClientMessageSender<TBody, TResponse>>();
 
         var context = new ApiClientSendContext(

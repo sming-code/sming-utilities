@@ -1,11 +1,9 @@
 using System.Text;
+using System.Text.Json;
 using Microsoft.Extensions.Logging;
 
 namespace SmingCode.Utilities.ProcessTracking.Kafka;
-
-using System.Text.Json;
 using Config;
-using ServiceMetadata;
 using Utilities.Kafka.Consumers;
 
 internal class ProcessTrackingConsumerMiddleware(
@@ -15,8 +13,7 @@ internal class ProcessTrackingConsumerMiddleware(
 {
     public async Task<KafkaEventResult> HandleAsync(
         KafkaConsumerContext context,
-        IProcessTrackingHandler processTrackingHandler,
-        IServiceMetadataProvider serviceMetadataProvider
+        IProcessTrackingHandler processTrackingHandler
     )
     {
         var messageHeaders = context.Headers
@@ -44,7 +41,6 @@ internal class ProcessTrackingConsumerMiddleware(
 
         using var scope = _logger.BeginScope(
             processTrackingHandler.StructuredLoggingMetadata
-                .Concat(serviceMetadataProvider.GetMetadata().GetCustomDimensions())
         );
 
         if (_logger.IsEnabled(LogLevel.Information))
