@@ -14,7 +14,7 @@ internal class KafkaConsumer<TKey, TValue>(
     ILogger<KafkaConsumer<TKey, TValue>> _logger
 ) : IKafkaConsumer
 {
-    private readonly string _fullServiceDescriptor = serviceMetadataProvider.GetMetadata().FullServiceDescriptor;
+    private readonly string _serviceName = serviceMetadataProvider.GetMetadata().ServiceName;
 
     public void InitialiseEventConsumer(
         CancellationToken cancellationToken
@@ -179,7 +179,7 @@ internal class KafkaConsumer<TKey, TValue>(
         => _kafkaConsumerDefinition.IsolationMode switch
         {
             IsolationMode.PerServiceInstance => Guid.NewGuid().ToString(),
-            IsolationMode.PerServiceType => _fullServiceDescriptor,
+            IsolationMode.PerServiceType => _serviceName,
             _ => throw new NotSupportedException($"Isolation level {_kafkaConsumerDefinition.IsolationMode} not currently supported.")
         };
 

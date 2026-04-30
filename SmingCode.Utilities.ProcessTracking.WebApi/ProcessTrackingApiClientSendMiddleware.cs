@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 
 namespace SmingCode.Utilities.ProcessTracking.WebApi;
+using Config;
 using ServiceApiClient;
 
 internal class ProcessTrackingApiClientSendMiddleware(
@@ -18,13 +19,14 @@ internal class ProcessTrackingApiClientSendMiddleware(
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace(
-                "Adding process tags to http message: {ProcessTags}",
+                "Adding process tags to http message: {ProcessTags} - {TraceType}",
                 string.Join(
                     ",",
                     currentProcessTags.Select(header =>
                         $"{header.Key}:{header.Value}"
                     )
-                )
+                ),
+                Constants.UTILITY_TRACE_TYPE
             );
         }
 

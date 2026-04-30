@@ -1,6 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
-namespace SmingCode.Utilities.ProcessTracking.WebApi;
+namespace SmingCode.Utilities.ProcessTracking.WebApi.Config;
 using ServiceApiClient.Config;
 using StartupProcesses;
 

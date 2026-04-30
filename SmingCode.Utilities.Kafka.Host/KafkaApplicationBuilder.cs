@@ -5,7 +5,7 @@ using Microsoft.Extensions.Hosting;
 namespace SmingCode.Utilities.Kafka.Host;
 using Config;
 using Consumers;
-using ServiceMetadata;
+using ServiceMetadata.Config;
 
 public class KafkaApplicationBuilder(
     KafkaApplicationBuilderSettings? settings
