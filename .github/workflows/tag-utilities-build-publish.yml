@@ -18,9 +18,11 @@ jobs:
       fail-fast: true
       matrix:
         utility-project-name:
+          - SmingCode.Utilities.Data
           - SmingCode.Utilities.DelegateInvokers
           - SmingCode.Utilities.Logging.AspNetCore
-          - SmingCode.Utilities.ServiceMetadata
+          - SmingCode.Utilities.MinimalApi
+          - SmingCode.Utilities.ProcessTracking
           - SmingCode.Utilities.StartupProcesses
           - SmingCode.Utilities.Testing.AutoDomainData
     needs: get-version-no
@@ -34,11 +36,8 @@ jobs:
       fail-fast: true
       matrix:
         utility-project-name:
-          - SmingCode.Utilities.Data
-          - SmingCode.Utilities.Kafka
-          - SmingCode.Utilities.MinimalApi
-          - SmingCode.Utilities.ProcessTracking
           - SmingCode.Utilities.ServiceApiClient
+          - SmingCode.Utilities.ServiceMetadata
           - SmingCode.Utilities.StartupProcesses.AspNetCore
     needs: [ get-version-no, build-test-publish-0 ]
     uses: ./.github/workflows/build-test.yml
@@ -51,18 +50,30 @@ jobs:
       fail-fast: true
       matrix:
         utility-project-name:
-          - SmingCode.Utilities.Kafka.Host
+          - SmingCode.Utilities.Kafka
           - SmingCode.Utilities.Kafka.MinimalConsumers
-          - SmingCode.Utilities.ProcessTracking.Kafka
           - SmingCode.Utilities.ProcessTracking.WebApi
     needs: [ get-version-no, build-test-publish-1 ]
     uses: ./.github/workflows/build-test.yml
     with:
       project-name: '${{ matrix.utility-project-name }}'
       version-no: ${{ needs.get-version-no.outputs.next-version }}
+  build-test-publish-3:
+    name: Process utilities set 3
+    strategy:
+      fail-fast: true
+      matrix:
+        utility-project-name:
+          - SmingCode.Utilities.Kafka.Host
+          - SmingCode.Utilities.ProcessTracking.Kafka
+    needs: [ get-version-no, build-test-publish-2 ]
+    uses: ./.github/workflows/build-test.yml
+    with:
+      project-name: '${{ matrix.utility-project-name }}'
+      version-no: ${{ needs.get-version-no.outputs.next-version }}
   create-release:
     name: Create release
-    needs: [ build-test-publish-2, get-version-no ]
+    needs: [ build-test-publish-3, get-version-no ]
     uses: ./.github/workflows/add-github-release.yml
     with:
       version-number: ${{ needs.get-version-no.outputs.next-version }}
