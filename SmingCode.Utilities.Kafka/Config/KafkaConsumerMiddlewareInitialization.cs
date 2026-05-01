@@ -66,7 +66,7 @@ internal class KafkaConsumerMiddlewareInitialization : IServiceInitializer
 
         Expression[] parameterBuilderExpressions = [];
         var handleAsyncMethod = middlewareType.GetMethod("HandleAsync");
-        if (handleAsyncMethod is null || handleAsyncMethod.ReturnType != typeof(Task))
+        if (handleAsyncMethod is null || handleAsyncMethod.ReturnType != typeof(Task<KafkaEventResult>))
         {
             throw new InvalidOperationException(
                 $"Attempt to inject KafkaConsumer middleware {middlewareType.Name} failed as it has no HandleAsync method with return type Task<KafkaEventResult>"

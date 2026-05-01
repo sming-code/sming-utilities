@@ -66,10 +66,10 @@ internal class KafkaProducerMiddlewareInitialization : IServiceInitializer
 
         Expression[] parameterBuilderExpressions = [];
         var handleAsyncMethod = middlewareType.GetMethod("HandleAsync");
-        if (handleAsyncMethod is null || handleAsyncMethod.ReturnType != typeof(Task))
+        if (handleAsyncMethod is null || handleAsyncMethod.ReturnType != typeof(Task<bool>))
         {
             throw new InvalidOperationException(
-                $"Attempt to inject KafkaProducer middleware {middlewareType.Name} failed as it has no HandleAsync method with return type Task<KafkaEventResult>"
+                $"Attempt to inject KafkaProducer middleware {middlewareType.Name} failed as it has no HandleAsync method with return type Task<bool>"
             );
         }
 
