@@ -13,7 +13,6 @@ internal class ApiClient<TService>(
 ) : IServiceApiClient<TService> where TService : class
 {
     private static ApiClientConfiguration? _clientConfiguration;
-    private static readonly NoResponse _noResponse = new();
     private ApiClientConfiguration ClientConfiguration
         => _clientConfiguration ??= new(
             _apiClientConfiguration.ServiceDisplayName,
@@ -87,7 +86,7 @@ internal class ApiClient<TService>(
             messageHeaders
         );
 
-        return resultantContext is TResponse response
+        return resultantContext.Response is TResponse response
             ? response
             : throw new InvalidCastException(
                 "Just plain failed"
@@ -108,7 +107,7 @@ internal class ApiClient<TService>(
             messageHeaders
         );
 
-        return resultantContext is TResponse response
+        return resultantContext.Response is TResponse response
             ? response
             : throw new InvalidCastException(
                 "Just plain failed"
