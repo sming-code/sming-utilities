@@ -1,7 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 
 namespace SmingCode.Utilities.ServiceMetadata.Config;
-using StartupProcesses;
 
 public static class Injection
 {
@@ -10,7 +9,6 @@ public static class Injection
     )
     {
         services.AddSingleton<IServiceMetadataProvider, ServiceMetadataProvider>();
-        services.AddScoped<IServiceInitializer, ServiceMetadataLoggingScopeInitialization>();
 
         return services;
     }

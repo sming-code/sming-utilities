@@ -23,6 +23,7 @@ jobs:
           - SmingCode.Utilities.Logging.AspNetCore
           - SmingCode.Utilities.MinimalApi
           - SmingCode.Utilities.ProcessTracking
+          - SmingCode.Utilities.ServiceMetadata
           - SmingCode.Utilities.StartupProcesses
           - SmingCode.Utilities.Testing.AutoDomainData
     needs: get-version-no
@@ -37,7 +38,7 @@ jobs:
       matrix:
         utility-project-name:
           - SmingCode.Utilities.ServiceApiClient
-          - SmingCode.Utilities.ServiceMetadata
+          - SmingCode.Utilities.ServiceMetadata.WebApplicationStartup
           - SmingCode.Utilities.StartupProcesses.AspNetCore
     needs: [ get-version-no, build-test-publish-0 ]
     uses: ./.github/workflows/build-test.yml

@@ -2,12 +2,17 @@ using Microsoft.Extensions.Logging;
 
 namespace SmingCode.Utilities.ProcessTracking.WebApi;
 using Config;
+using ServiceMetadata;
 
 internal class WebApiIngressMiddleware(
     RequestDelegate _next,
+    IServiceMetadataProvider serviceMetadataProvider,
     ILogger<WebApiIngressMiddleware> _logger
 )
 {
+    private readonly Dictionary<string, object> _serviceMetadataCustomDimensions
+        = serviceMetadataProvider.GetMetadata().GetCustomDimensions();
+
     public async Task InvokeAsync(
         HttpContext httpContext,
         IProcessTrackingHandler processTrackingHandler
@@ -42,6 +47,7 @@ internal class WebApiIngressMiddleware(
 
         using var scope = _logger.BeginScope(
             processTrackingHandler.StructuredLoggingMetadata
+                .Concat(_serviceMetadataCustomDimensions)
         );
 
         var currentProcessTags = processTrackingHandler.ProcessTags;

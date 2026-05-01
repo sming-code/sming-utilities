@@ -14,7 +14,7 @@ public static class MetadataExtensions
         this Metadata metadata
     ) => new()
     {
-        { "service-name", metadata.ServiceName },
-        { "service-instance-id", metadata.ServiceInstanceId }
+        { "ServiceName", metadata.ServiceName },
+        { "ServiceInstanceId", metadata.ServiceInstanceId }
     };
 }
