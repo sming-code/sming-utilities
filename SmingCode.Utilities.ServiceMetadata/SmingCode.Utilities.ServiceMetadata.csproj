@@ -12,7 +12,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\SmingCode.Utilities.StartupProcesses\SmingCode.Utilities.StartupProcesses.csproj" />
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>$(AssemblyName).WebApplicationStartup</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
 </Project>

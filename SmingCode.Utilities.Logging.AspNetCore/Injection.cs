@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
-using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.Extensions.Logging;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 
 namespace SmingCode.Utilities.Logging.AspNetCore;
 

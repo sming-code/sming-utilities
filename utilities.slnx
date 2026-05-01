@@ -2,9 +2,9 @@
   <Project Path="SmingCode.Utilities.Data/SmingCode.Utilities.Data.csproj" />
   <Project Path="SmingCode.Utilities.DelegateInvokers.Tests/SmingCode.Utilities.DelegateInvokers.Tests.csproj" />
   <Project Path="SmingCode.Utilities.DelegateInvokers/SmingCode.Utilities.DelegateInvokers.csproj" />
-  <Project Path="SmingCode.Utilities.Kafka.MinimalConsumers/SmingCode.Utilities.Kafka.MinimalConsumers.csproj" />
   <Project Path="SmingCode.Utilities.Kafka.Host/SmingCode.Utilities.Kafka.Host.csproj" />
   <Project Path="SmingCode.Utilities.Kafka.MinimalConsumers.Tests/SmingCode.Utilities.Kafka.MinimalConsumers.Tests.csproj" />
+  <Project Path="SmingCode.Utilities.Kafka.MinimalConsumers/SmingCode.Utilities.Kafka.MinimalConsumers.csproj" />
   <Project Path="SmingCode.Utilities.Kafka.Tests/SmingCode.Utilities.Kafka.Tests.csproj" />
   <Project Path="SmingCode.Utilities.Kafka/SmingCode.Utilities.Kafka.csproj" />
   <Project Path="SmingCode.Utilities.Logging.AspNetCore/SmingCode.Utilities.Logging.AspNetCore.csproj" />
@@ -13,6 +13,7 @@
   <Project Path="SmingCode.Utilities.ProcessTracking.WebApi/SmingCode.Utilities.ProcessTracking.WebApi.csproj" />
   <Project Path="SmingCode.Utilities.ProcessTracking/SmingCode.Utilities.ProcessTracking.csproj" />
   <Project Path="SmingCode.Utilities.ServiceApiClient/SmingCode.Utilities.ServiceApiClient.csproj" />
+  <Project Path="SmingCode.Utilities.ServiceMetadata.WebApplicationStartup/SmingCode.Utilities.ServiceMetadata.WebApplicationStartup.csproj" />
   <Project Path="SmingCode.Utilities.ServiceMetadata/SmingCode.Utilities.ServiceMetadata.csproj" />
   <Project Path="SmingCode.Utilities.StartupProcesses.AspNetCore/SmingCode.Utilities.StartupProcesses.AspNetCore.csproj" />
   <Project Path="SmingCode.Utilities.StartupProcesses/SmingCode.Utilities.StartupProcesses.csproj" />
