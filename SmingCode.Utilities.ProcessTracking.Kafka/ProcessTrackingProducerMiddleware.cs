@@ -26,10 +26,10 @@ internal class ProcessTrackingProducerMiddleware(
                         $"{tag.Key}:{tag.Value}"
                     )
                 ),
-                Constants.CONSUMER_MIDDLEWARE_UTILITY_TRACE_TYPE
+                Constants.PRODUCER_MIDDLEWARE_UTILITY_TRACE_TYPE
             );
         }
-        
+
         foreach (var tag in processTrackingTags)
         {
             context.AddHeader(tag.Key, tag.Value.ToString()!);
