@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using System.Web;
 using Microsoft.Extensions.Logging;
 
 namespace SmingCode.Utilities.ProcessTracking.WebApi;
@@ -73,12 +74,16 @@ internal class WebApiIngressMiddleware(
         );
 
         var currentProcessTags = processTrackingHandler.ProcessTags;
+        httpContext.Response.OnStarting(() =>
+        {
+            foreach (var processTag in currentProcessTags)
+            {
+                httpContext.Response.Headers.TryAdd(processTag.Key, processTag.Value.ToString());
+            }
+
+            return Task.FromResult(0);
+        });
 
         await _next(httpContext);
-
-        foreach (var processTag in currentProcessTags)
-        {
-            httpContext.Response.Headers.TryAdd(processTag.Key, processTag.Value.ToString());
-        }
     }
 }
