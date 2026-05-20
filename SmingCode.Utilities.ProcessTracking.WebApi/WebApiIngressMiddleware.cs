@@ -75,5 +75,10 @@ internal class WebApiIngressMiddleware(
         var currentProcessTags = processTrackingHandler.ProcessTags;
 
         await _next(httpContext);
+
+        foreach (var processTag in currentProcessTags)
+        {
+            httpContext.Response.Headers.TryAdd(processTag.Key, processTag.Value.ToString());
+        }
     }
 }
