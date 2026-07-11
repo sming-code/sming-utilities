@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <PackageId>SmingCode.Utilities.Nullability</PackageId>
     <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/sming-code/sming-utilities</RepositoryUrl>
+    <RepositoryUrl>https://github.com/TAG-Group/tag-dotnet-utilities</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>

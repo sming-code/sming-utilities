@@ -9,7 +9,11 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.ApplicationInsights" Version="3.1.0" />
     <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\SmingCode.Utilities.ServiceMetadata\SmingCode.Utilities.ServiceMetadata.csproj" />
+    <ProjectReference Include="..\SmingCode.Utilities.ServiceApiClient\SmingCode.Utilities.ServiceApiClient.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -24,6 +24,10 @@ public static class DelegateInvoker<TResult>
         { 3, typeof(Invoker<,,>) },
         { 4, typeof(Invoker<,,,>) },
         { 5, typeof(Invoker<,,,,>) },
+        { 6, typeof(Invoker<,,,,,>) },
+        { 7, typeof(Invoker<,,,,,,>) },
+        { 8, typeof(Invoker<,,,,,,,>) },
+        { 9, typeof(Invoker<,,,,,,,,>) }
     };
 
     public static IDelegateInvoker<TResult> FromDelegate(
@@ -206,6 +210,164 @@ public static class DelegateInvoker<TResult>
                 _paramBuilder3(),
                 _paramBuilder4(),
                 _paramBuilder5()
+            );
+    }
+
+    internal class Invoker<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6>(
+        Delegate @delegate,
+        bool isAsyncDelegate,
+        Func<TParam1> _paramBuilder1,
+        Func<TParam2> _paramBuilder2,
+        Func<TParam3> _paramBuilder3,
+        Func<TParam4> _paramBuilder4,
+        Func<TParam5> _paramBuilder5,
+        Func<TParam6> _paramBuilder6
+    ) : IDelegateInvoker<TResult>
+    {
+        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, Task<TResult>> _func = isAsyncDelegate
+            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, Task<TResult>>)@delegate
+            : async (param1, param2, param3, param4, param5, param6) => await Task.FromResult(
+                ((Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TResult>)@delegate)(
+                    param1,
+                    param2,
+                    param3,
+                    param4,
+                    param5,
+                    param6
+                )
+            );
+
+        public async Task<TResult> Invoke()
+            => await _func(
+                _paramBuilder1(),
+                _paramBuilder2(),
+                _paramBuilder3(),
+                _paramBuilder4(),
+                _paramBuilder5(),
+                _paramBuilder6()
+            );
+    }
+
+    internal class Invoker<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7>(
+        Delegate @delegate,
+        bool isAsyncDelegate,
+        Func<TParam1> _paramBuilder1,
+        Func<TParam2> _paramBuilder2,
+        Func<TParam3> _paramBuilder3,
+        Func<TParam4> _paramBuilder4,
+        Func<TParam5> _paramBuilder5,
+        Func<TParam6> _paramBuilder6,
+        Func<TParam7> _paramBuilder7
+    ) : IDelegateInvoker<TResult>
+    {
+        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, Task<TResult>> _func = isAsyncDelegate
+            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, Task<TResult>>)@delegate
+            : async (param1, param2, param3, param4, param5, param6, param7) => await Task.FromResult(
+                ((Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TResult>)@delegate)(
+                    param1,
+                    param2,
+                    param3,
+                    param4,
+                    param5,
+                    param6,
+                    param7
+                )
+            );
+
+        public async Task<TResult> Invoke()
+            => await _func(
+                _paramBuilder1(),
+                _paramBuilder2(),
+                _paramBuilder3(),
+                _paramBuilder4(),
+                _paramBuilder5(),
+                _paramBuilder6(),
+                _paramBuilder7()
+            );
+    }
+
+    internal class Invoker<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8>(
+        Delegate @delegate,
+        bool isAsyncDelegate,
+        Func<TParam1> _paramBuilder1,
+        Func<TParam2> _paramBuilder2,
+        Func<TParam3> _paramBuilder3,
+        Func<TParam4> _paramBuilder4,
+        Func<TParam5> _paramBuilder5,
+        Func<TParam6> _paramBuilder6,
+        Func<TParam7> _paramBuilder7,
+        Func<TParam8> _paramBuilder8
+    ) : IDelegateInvoker<TResult>
+    {
+        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, Task<TResult>> _func = isAsyncDelegate
+            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, Task<TResult>>)@delegate
+            : async (param1, param2, param3, param4, param5, param6, param7, param8) => await Task.FromResult(
+                ((Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, TResult>)@delegate)(
+                    param1,
+                    param2,
+                    param3,
+                    param4,
+                    param5,
+                    param6,
+                    param7,
+                    param8
+                )
+            );
+
+        public async Task<TResult> Invoke()
+            => await _func(
+                _paramBuilder1(),
+                _paramBuilder2(),
+                _paramBuilder3(),
+                _paramBuilder4(),
+                _paramBuilder5(),
+                _paramBuilder6(),
+                _paramBuilder7(),
+                _paramBuilder8()
+            );
+    }
+
+    internal class Invoker<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, TParam9>(
+        Delegate @delegate,
+        bool isAsyncDelegate,
+        Func<TParam1> _paramBuilder1,
+        Func<TParam2> _paramBuilder2,
+        Func<TParam3> _paramBuilder3,
+        Func<TParam4> _paramBuilder4,
+        Func<TParam5> _paramBuilder5,
+        Func<TParam6> _paramBuilder6,
+        Func<TParam7> _paramBuilder7,
+        Func<TParam8> _paramBuilder8,
+        Func<TParam9> _paramBuilder9
+    ) : IDelegateInvoker<TResult>
+    {
+        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, TParam9, Task<TResult>> _func = isAsyncDelegate
+            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, TParam9, Task<TResult>>)@delegate
+            : async (param1, param2, param3, param4, param5, param6, param7, param8, param9) => await Task.FromResult(
+                ((Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, TParam9, TResult>)@delegate)(
+                    param1,
+                    param2,
+                    param3,
+                    param4,
+                    param5,
+                    param6,
+                    param7,
+                    param8,
+                    param9
+                )
+            );
+
+        public async Task<TResult> Invoke()
+            => await _func(
+                _paramBuilder1(),
+                _paramBuilder2(),
+                _paramBuilder3(),
+                _paramBuilder4(),
+                _paramBuilder5(),
+                _paramBuilder6(),
+                _paramBuilder7(),
+                _paramBuilder8(),
+                _paramBuilder9()
             );
     }
 }

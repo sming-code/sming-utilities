@@ -77,27 +77,21 @@ internal class ProcessTrackingConsumerMiddleware(
     }
 
     private bool TryLoadProcessDetailFromIncomingTags(
-        Headers incomingHeaders,
+        HeaderCollection incomingHeaders,
         IProcessTrackingHandler processTrackingHandler
     )
     {
-        var messageHeaders = incomingHeaders
-            .ToDictionary(
-                header => header.Key,
-                header => Encoding.UTF8.GetString(header.GetValueBytes())
-            );
-
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace(
                 "Attempting to load process details from incoming kafka message headers. Headers received are {IncomingHeaders} - {TraceType}",
-                JsonSerializer.Serialize(messageHeaders),
+                JsonSerializer.Serialize(incomingHeaders),
                 Constants.CONSUMER_MIDDLEWARE_UTILITY_TRACE_TYPE
             );
         }
 
         if (!processTrackingHandler.TryLoadProcessDetailFromIncomingTags(
-            messageHeaders.ToDictionary(
+            incomingHeaders.ToDictionary(
                 header => header.Key,
                 header => (object)header.Value
             ),

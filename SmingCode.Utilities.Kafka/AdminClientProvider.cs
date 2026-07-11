@@ -1,22 +1,24 @@
 namespace SmingCode.Utilities.Kafka;
 
 internal class AdminClientProvider(
-    KafkaServerOptions _kafkaServerOptions
+    KafkaOptions _kafkaOptions
 ) : IAdminClientProvider
 {
     public IAdminClient GetAdminClient()
     {
+        var kafkaServerOptions = _kafkaOptions.Server;
+
         var adminClientConfig = new AdminClientConfig
         {
-            BootstrapServers = _kafkaServerOptions.BootstrapServers,
-            SecurityProtocol = Enum.Parse<SecurityProtocol>(_kafkaServerOptions.SecurityProtocol)
+            BootstrapServers = kafkaServerOptions.BootstrapServers,
+            SecurityProtocol = Enum.Parse<SecurityProtocol>(kafkaServerOptions.SecurityProtocol)
         };
 
-        if (!string.IsNullOrEmpty(_kafkaServerOptions.SaslMechanism))
+        if (!string.IsNullOrEmpty(kafkaServerOptions.SaslMechanism))
         {
-            adminClientConfig.SaslMechanism = Enum.Parse<SaslMechanism>(_kafkaServerOptions.SaslMechanism);
-            adminClientConfig.SaslUsername = _kafkaServerOptions.SaslUsername;
-            adminClientConfig.SaslPassword = _kafkaServerOptions.SaslPassword;
+            adminClientConfig.SaslMechanism = Enum.Parse<SaslMechanism>(kafkaServerOptions.SaslMechanism);
+            adminClientConfig.SaslUsername = kafkaServerOptions.SaslUsername;
+            adminClientConfig.SaslPassword = kafkaServerOptions.SaslPassword;
         }
 
         return new AdminClientBuilder(

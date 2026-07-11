@@ -22,6 +22,9 @@
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
       <_Parameter1>$(AssemblyName).MsalOAuth</_Parameter1>
     </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>$(AssemblyName).TagApimConfiguration</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Logging;
 
-namespace SmingCode.Utilities.ProcessTracking.WebApi;
+namespace SmingCode.Utilities.ProcessTracking;
 using Config;
 using ServiceApiClient;
 
@@ -26,7 +26,7 @@ internal class ProcessTrackingApiClientSendMiddleware(
                         $"{header.Key}:{header.Value}"
                     )
                 ),
-                Constants.UTILITY_TRACE_TYPE
+                Constants.PROCESS_TRACKING_UTILITY_TRACE_TYPE
             );
         }
 

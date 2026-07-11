@@ -17,7 +17,7 @@ internal class KafkaConsumerMiddlewareInitialization : IServiceInitializer
     private static readonly MethodInfo _KafkaConsumeDelegateBuilder =
         typeof(KafkaConsumerMiddlewareInitialization)
             .GetMethod(
-                "BuildKafkaConsumerDelegate",
+                nameof(BuildKafkaConsumerDelegate),
                 BindingFlags.Static | BindingFlags.NonPublic
             )!;
     private static readonly MethodInfo _getRequiredServiceMethod =
@@ -41,7 +41,7 @@ internal class KafkaConsumerMiddlewareInitialization : IServiceInitializer
 
             if (middlewareDetails is not null)
             {
-                foreach (var middleware in middlewareDetails.Reverse())
+                foreach (var middleware in middlewareDetails.OrderBy(mid => mid.ProcessPosition))
                 {
                     var buildApiDelegateMethod = _KafkaConsumeDelegateBuilder
                         !.MakeGenericMethod(middleware.MiddlewareImplementation);
