@@ -1,5 +1,11 @@
 ﻿namespace SmingCode.Utilities.Kafka;
 
+internal class KafkaOptions
+{
+    public required KafkaServerOptions Server { get; set; }
+    public KafkaConsumerOptions? Consumers { get; set; }
+}
+
 internal class KafkaServerOptions
 {
     public required string BootstrapServers { get; set; }
@@ -8,4 +14,10 @@ internal class KafkaServerOptions
     public string? SaslMechanism { get; set; }
     public string? SaslUsername { get; set; }
     public string? SaslPassword { get; set; }
+}
+
+internal class KafkaConsumerOptions
+{
+    public bool SaveRawMessages { get; set; } = false;
+    public string? RawMessageFolder { get; set; }
 }

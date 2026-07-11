@@ -30,7 +30,7 @@ public static class Injection
 
         var newKafkaConsumerDefinition = (IKafkaConsumerDefinition)Activator.CreateInstance(
             typedKafkaConsumerDefinitionType,
-            [ topicToMatch, handler ]
+            [ topicToMatch, handler, services ]
         )!;
         services.AddSingleton(newKafkaConsumerDefinition);
 
@@ -43,13 +43,14 @@ public static class Injection
         bool includeConsumers = false
     )
     {
-        var kafkaServerOptions = configuration.GetRequiredSection("Kafka")
-            .Get<KafkaServerOptions>()
+        var kafkaOptions = configuration.GetRequiredSection("Kafka")
+            .Get<KafkaOptions>()
             ?? throw new InvalidOperationException("No valid kafka configuration section found.");
-        services.AddSingleton(kafkaServerOptions);
+        services.AddSingleton(kafkaOptions);
         services.AddSingleton<IAdminClientProvider, AdminClientProvider>();
         services.AddSingleton<ITopicManager, TopicManager>();
         services.AddScoped<IKafkaProducer, KafkaProducer>();
+        services.AddSingleton<IKafkaProducerBuilder, KafkaProducerBuilder>();
 
         services.AddSingleton<ProducerMiddlewareHandler>();
         services.AddScoped<IServiceInitializer, KafkaProducerMiddlewareInitialization>();
@@ -60,24 +61,6 @@ public static class Injection
             services.AddSingleton<ConsumerMiddlewareHandler>();
             services.AddScoped<IServiceInitializer, KafkaConsumerMiddlewareInitialization>();
         }
-
-        return services;
-    }
-
-    public static IServiceCollection AddKafkaConsumerMiddleware<TImplementation>(
-        this IServiceCollection services
-    )
-    {
-        services.AddSingleton(new ConsumerMiddlewareDetail(typeof(TImplementation)));
-
-        return services;
-    }
-
-    public static IServiceCollection AddKafkaProducerMiddleware<TImplementation>(
-        this IServiceCollection services
-    )
-    {
-        services.AddSingleton(new ProducerMiddlewareDetail(typeof(TImplementation)));
 
         return services;
     }

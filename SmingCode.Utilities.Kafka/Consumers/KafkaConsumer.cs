@@ -9,28 +9,44 @@ internal class KafkaConsumer<TKey, TValue>(
     ITopicManager _topicManager,
     KafkaConsumerDefinition<TKey, TValue> _kafkaConsumerDefinition,
     IServiceMetadataProvider serviceMetadataProvider,
-    KafkaServerOptions _kafkaServerOptions,
+    KafkaOptions _kafkaOptions,
     ConsumerMiddlewareHandler middlewareHandler,
     ILogger<KafkaConsumer<TKey, TValue>> _logger
 ) : IKafkaConsumer
+    where TKey : notnull
+    where TValue : notnull
 {
+    private IConsumer<string, string> _consumer = null!;
     private readonly string _serviceName = serviceMetadataProvider.GetMetadata().ServiceName;
     private readonly JsonSerializerOptions _jsonSerializerOptions = JsonSerializerOptions.Web;
+    private readonly bool _saveRawMessages = _kafkaOptions.Consumers?.SaveRawMessages ?? false;
 
     public void InitialiseEventConsumer(
         CancellationToken cancellationToken
     )
     {
+        if (_kafkaConsumerDefinition.PreInitProcessHandlers.Count is not 0)
+        {
+            using var scope = _serviceScopeFactory.CreateScope();
+            var serviceProvider = scope.ServiceProvider;
+            _kafkaConsumerDefinition.PreInitProcessHandlers.ForEach(handlerType =>
+            {
+                var handlerInstance = (IKafkaConsumerPreInitProcessHandler)serviceProvider.GetRequiredService(handlerType);
+
+                handlerInstance.Run(_kafkaConsumerDefinition);
+            });
+        }
+
         var topicToConsume = GetTopicToConsume();
         var clientGroupId = GetClientGroupId();
-        var consumer = BuildConsumer(
+        _consumer = BuildConsumer(
             topicToConsume,
             clientGroupId
         );
 
-        MetadataRefresh(consumer.Handle);
+        MetadataRefresh(_consumer.Handle);
 
-        consumer.Subscribe(topicToConsume);
+        _consumer.Subscribe(topicToConsume);
 
         var consumerTask = Task.Run(() =>
         {
@@ -51,35 +67,20 @@ internal class KafkaConsumer<TKey, TValue>(
 
                     try
                     {
-                        var cr = consumer.Consume(TimeSpan.FromMilliseconds(1000));
+                        var cr = _consumer.Consume(TimeSpan.FromMilliseconds(1000));
 
                         if (cr is not null && cr.Topic != "__consumer_offsets")
                         {
-                            if (_logger.IsEnabled(LogLevel.Information))
-                            {
-                                _logger.LogInformation(
-                                    "Message received from topic {topicToConsume}, Beginning processing - {TraceType}",
-                                    topicToConsume,
-                                    Constants.CONSUMER_UTILITY_TRACE_TYPE
-                                );
-                                if (_logger.IsEnabled(LogLevel.Trace))
-                                {
-                                    _logger.LogTrace(
-                                        "Message details are: Headers: {Headers}, Key: {Key}, Value: {Value} - {TraceType}",
-                                        cr.Message.Headers,
-                                        cr.Message.Key,
-                                        cr.Message.Value,
-                                        Constants.CONSUMER_UTILITY_TRACE_TYPE
-                                    );
-                                }
-                            }
+                            LogIncomingEvent(
+                                cr,
+                                topicToConsume
+                            );
 
                             Task.Run(async () =>
                             {
                                 try
                                 {
                                     var result = await ProcessKafkaEvent(
-                                        topicToConsume,
                                         cr
                                     );
 
@@ -89,20 +90,22 @@ internal class KafkaConsumer<TKey, TValue>(
                                         {
                                             _logger.LogInformation(
                                                 "Kafka consumer for topic {KafkaTopic} successfully consumed message - {TraceType}",
-                                                topicToConsume,
+                                                cr.Topic,
                                                 Constants.CONSUMER_UTILITY_TRACE_TYPE
                                             );
                                         }
 
-                                        consumer.StoreOffset(cr);
+                                        _consumer.StoreOffset(cr);
                                     }
                                     else
                                     {
                                         _logger.LogWarning(
                                             "Kafka consumer for topic {KafkaTopic} failed to complete processing - {TraceType}",
-                                            topicToConsume,
+                                            cr.Topic,
                                             Constants.CONSUMER_UTILITY_TRACE_TYPE
                                         );
+
+                                        throw new Exception();
                                     }
                                 }
                                 catch (Exception ex)
@@ -110,9 +113,11 @@ internal class KafkaConsumer<TKey, TValue>(
                                     _logger.LogError(
                                         ex,
                                         "Kafka consumer for topic {KafkaTopic} Exception occurred whilst processing message - {TraceType}",
-                                        topicToConsume,
+                                        cr.Topic,
                                         Constants.CONSUMER_UTILITY_TRACE_TYPE
                                     );
+
+                                    throw;
                                 }
                             });
                         }
@@ -130,7 +135,6 @@ internal class KafkaConsumer<TKey, TValue>(
                             );
                         }
                     }
-                    catch { }
                 }
             }
             catch (OperationCanceledException)
@@ -140,24 +144,86 @@ internal class KafkaConsumer<TKey, TValue>(
                     "Subscription to topic '{topicToConsume}' has been stopped.",
                     topicToConsume
                 );
-                consumer.Close();
-                consumer.Dispose();
+                _consumer.Close();
+                _consumer.Dispose();
             }
         }, cancellationToken);
     }
 
+    public async Task PauseTopicPartition(
+        string topicName,
+        int partitionNo,
+        TimeSpan delay
+    )
+    {
+        var assignedPartitions = _consumer.Assignment;
+        var matchedPartition = assignedPartitions.FirstOrDefault(
+            partition => partition.Topic == topicName
+                && partition.Partition == partitionNo
+        );
+
+        if (matchedPartition is null)
+            throw new Exception("There may be trouble ahead!");
+
+        _consumer.Pause([ matchedPartition ]);
+        await Task.Delay(delay);
+        _consumer.Seek(new(
+            matchedPartition,
+            _consumer.GetWatermarkOffsets(matchedPartition).High - 1
+        ));
+        _consumer.Resume([ matchedPartition ]);
+    }
+
+    private void LogIncomingEvent(
+        ConsumeResult<string, string> consumeResult,
+        string topic
+    )
+    {
+        if (_saveRawMessages)
+        {
+            File.WriteAllText(
+                Path.Join(_kafkaOptions.Consumers!.RawMessageFolder!, $"{Guid.NewGuid()}.json"),
+                consumeResult.Message.Value
+            );
+        }
+
+        if (_logger.IsEnabled(LogLevel.Information))
+        {
+            _logger.LogInformation(
+                "Message received from topic {topicToConsume}, Beginning processing - {TraceType}",
+                topic,
+                Constants.CONSUMER_UTILITY_TRACE_TYPE
+            );
+            if (_logger.IsEnabled(LogLevel.Trace))
+            {
+                _logger.LogTrace(
+                    "Message details are: Headers: {Headers}, Key: {Key}, Value: {Value} - {TraceType}",
+                    consumeResult.Message.Headers,
+                    consumeResult.Message.Key,
+                    consumeResult.Message.Value,
+                    Constants.CONSUMER_UTILITY_TRACE_TYPE
+                );
+            }
+        }
+    }
+
     private async Task<KafkaEventResult> ProcessKafkaEvent(
-        string topicConsumed,
         ConsumeResult<string, string> consumeResult
     )
     {
         using var scope = _serviceScopeFactory.CreateScope();
+        var serviceProvider = scope.ServiceProvider;
         var key = typeof(TKey) == typeof(Ignore)
             ? default
-            : JsonSerializer.Deserialize<TKey>(consumeResult.Message.Key, _jsonSerializerOptions);
+                : typeof(TKey) == typeof(string)
+                    ? consumeResult.Message.Key is TKey stringKey ? stringKey : default
+                    : JsonSerializer.Deserialize<TKey>(consumeResult.Message.Key, _jsonSerializerOptions);
         var value = typeof(TValue) == typeof(Ignore)
             ? default
-            : JsonSerializer.Deserialize<TValue>(consumeResult.Message.Value, _jsonSerializerOptions);
+                : typeof(TValue) == typeof(string)
+                    ? consumeResult.Message.Value is TValue stringValue ? stringValue : default
+                    : JsonSerializer.Deserialize<TValue>(consumeResult.Message.Value, _jsonSerializerOptions);
+
         if (_logger.IsEnabled(LogLevel.Trace))
         {
             _logger.LogTrace(
@@ -173,20 +239,21 @@ internal class KafkaConsumer<TKey, TValue>(
         async Task<KafkaEventResult> handlerDelegate(KafkaConsumerContext kafkaConsumerContext) =>
             await _kafkaConsumerDefinition.Handler.Invoke(
                 kafkaConsumerContext.ServiceProvider,
-                key,
-                value
+                kafkaConsumerContext
             );
 
         var context = new KafkaConsumerContext(
-            topicConsumed,
-            consumeResult.Message.Headers,
-            consumeResult.Message.Key,
+            this,
+            consumeResult.Topic,
+            consumeResult.Partition.Value,
+            new(consumeResult.Message.Headers),
+            key,
             typeof(TKey),
-            consumeResult.Message.Value,
+            value,
             typeof(TValue),
             _kafkaConsumerDefinition.CustomPropertyHandler,
             handlerDelegate,
-            scope.ServiceProvider
+            serviceProvider
         );
 
         return await middlewareHandler.RunPipeline(context);
@@ -219,24 +286,22 @@ internal class KafkaConsumer<TKey, TValue>(
                 );
             }
 
-            if (!_topicManager.CreateTopic(topicToConsume).Result)
-            {
-                throw new Exception("Couldn't register topic - oopsie!");
-            }
+            _topicManager.CreateTopic(topicToConsume).Wait();
         }
 
+        var kafkaServerOptions = _kafkaOptions.Server;
         var consumerBuilder = new ConsumerBuilder<string, string>(
             new ConsumerConfig
             {
-                BootstrapServers = _kafkaServerOptions.BootstrapServers,
-                SecurityProtocol = Enum.Parse<SecurityProtocol>(_kafkaServerOptions.SecurityProtocol),
+                BootstrapServers = kafkaServerOptions.BootstrapServers,
+                SecurityProtocol = Enum.Parse<SecurityProtocol>(kafkaServerOptions.SecurityProtocol),
                 GroupId = clientGroupId,
                 MetadataMaxAgeMs = 5000,
                 AutoOffsetReset = AutoOffsetReset.Earliest,
                 EnableAutoOffsetStore = false,
                 EnableAutoCommit = true,
-                AutoCommitIntervalMs = 100,
-                ApiVersionRequest = false
+                ApiVersionRequest = false,
+                TopicMetadataRefreshIntervalMs = 5000
             });
 
         return consumerBuilder.Build();

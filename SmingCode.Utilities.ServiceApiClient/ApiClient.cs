@@ -14,6 +14,38 @@ internal class ApiClient<TService>(
 {
     public HttpClient HttpClient => _httpClient;
 
+    public async Task<ApiClientResponse<TResponse>> Get<TResponse>(
+        string relativeUrl
+    ) where TResponse : notnull
+        => await Send<TResponse>(
+            HttpMethod.Get,
+            relativeUrl
+        );
+
+    public async Task<ApiClientResponse> Patch<TRequest>(
+        string relativeUrl,
+        TRequest request,
+        HeaderEntryCollection? headers = null
+    ) where TRequest : notnull
+        => await Send(
+            HttpMethod.Patch,
+            relativeUrl,
+            request,
+            headers
+        );
+
+    public async Task<ApiClientResponse<TResult>> Patch<TRequest, TResult>(
+        string relativeUrl,
+        TRequest request,
+        HeaderEntryCollection? headers = null
+    ) where TRequest : notnull where TResult : notnull
+        => await Send<TRequest, TResult>(
+            HttpMethod.Patch,
+            relativeUrl,
+            request,
+            headers
+        );
+
     public async Task<ApiClientResponse> Post<TRequest>(
         string relativeUrl,
         TRequest request,
@@ -38,6 +70,18 @@ internal class ApiClient<TService>(
             headers
         );
 
+    public async Task<ApiClientResponse> Put<TRequest>(
+        string relativeUrl,
+        TRequest request,
+        HeaderEntryCollection? headers = null
+    ) where TRequest : notnull
+        => await Send(
+            HttpMethod.Put,
+            relativeUrl,
+            request,
+            headers
+        );
+
     public async Task<ApiClientResponse<TResult>> Put<TRequest, TResult>(
         string relativeUrl,
         TRequest request,
@@ -48,14 +92,6 @@ internal class ApiClient<TService>(
             relativeUrl,
             request,
             headers
-        );
-
-    public async Task<ApiClientResponse<TResponse>> Get<TResponse>(
-        string relativeUrl
-    ) where TResponse : notnull
-        => await Send<TResponse>(
-            HttpMethod.Get,
-            relativeUrl
         );
 
     private async Task<ApiClientResponse> Send(

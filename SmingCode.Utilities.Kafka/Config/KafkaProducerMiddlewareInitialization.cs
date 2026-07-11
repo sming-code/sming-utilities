@@ -17,7 +17,7 @@ internal class KafkaProducerMiddlewareInitialization : IServiceInitializer
     private static readonly MethodInfo _KafkaProducerDelegateBuilder =
         typeof(KafkaProducerMiddlewareInitialization)
             .GetMethod(
-                "BuildKafkaProducerDelegate",
+                nameof(BuildKafkaProducerDelegate),
                 BindingFlags.Static | BindingFlags.NonPublic
             )!;
     private static readonly MethodInfo _getRequiredServiceMethod =
@@ -41,7 +41,7 @@ internal class KafkaProducerMiddlewareInitialization : IServiceInitializer
 
             if (middlewareDetails is not null)
             {
-                foreach (var middleware in middlewareDetails.Reverse())
+                foreach (var middleware in middlewareDetails.OrderByDescending(mid => mid.ProcessPosition))
                 {
                     var buildApiDelegateMethod = _KafkaProducerDelegateBuilder
                         !.MakeGenericMethod(middleware.MiddlewareImplementation);

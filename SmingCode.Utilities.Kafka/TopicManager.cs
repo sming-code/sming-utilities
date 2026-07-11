@@ -7,21 +7,24 @@ internal class TopicManager(
     ILogger<TopicManager> _logger
 ) : ITopicManager
 {
-    public async Task<bool> CreateTopic(string topicName, short replicationFactor = 1)
+    public async Task<bool> CreateTopic(
+        string topicName,
+        int noPartitions = -1,
+        short replicationFactor = -1
+    )
     {
         using var adminClient = _adminClientBuilder.GetAdminClient();
 
         try
         {
-            if (adminClient.GetMetadata(topicName, TimeSpan.FromSeconds(2))
-                .Topics.Count == 0)
-            {
-                await adminClient.CreateTopicsAsync(
-                [
-                    new() { Name = topicName, ReplicationFactor = replicationFactor }
-                ]);
-
-            }
+            await adminClient.CreateTopicsAsync(
+            [
+                new() {
+                    Name = topicName,
+                    NumPartitions = noPartitions,
+                    ReplicationFactor = replicationFactor
+                }
+            ]);
 
             return true;
         }

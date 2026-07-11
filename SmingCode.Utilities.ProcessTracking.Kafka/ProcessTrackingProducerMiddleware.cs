@@ -32,7 +32,7 @@ internal class ProcessTrackingProducerMiddleware(
 
         foreach (var tag in processTrackingTags)
         {
-            context.AddHeader(tag.Key, tag.Value.ToString()!);
+            context.Headers.Add(tag.Key, tag.Value);
         }
 
         return await producerDelegate(

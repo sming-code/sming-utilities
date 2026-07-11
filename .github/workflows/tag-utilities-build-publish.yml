@@ -23,7 +23,6 @@ jobs:
           - SmingCode.Utilities.Logging.AspNetCore
           - SmingCode.Utilities.Logging.Worker
           - SmingCode.Utilities.MinimalApi
-          - SmingCode.Utilities.Nullability
           - SmingCode.Utilities.ServiceMetadata
           - SmingCode.Utilities.StartupProcesses
           - SmingCode.Utilities.Testing.AutoDomainData
@@ -38,7 +37,6 @@ jobs:
       fail-fast: true
       matrix:
         utility-project-name:
-          - SmingCode.Utilities.ProcessTracking
           - SmingCode.Utilities.ServiceApiClient
           - SmingCode.Utilities.ServiceMetadata.WebApplicationStartup
           - SmingCode.Utilities.StartupProcesses.AspNetCore
@@ -55,8 +53,9 @@ jobs:
         utility-project-name:
           - SmingCode.Utilities.Kafka
           - SmingCode.Utilities.Kafka.MinimalConsumers
-          - SmingCode.Utilities.ProcessTracking.WebApi
+          - SmingCode.Utilities.ProcessTracking
           - SmingCode.Utilities.ServiceApiClient.MsalOAuth
+          - SmingCode.Utilities.ServiceApiClient.TagApimConfiguration
     needs: [ get-version-no, build-test-publish-1 ]
     uses: ./.github/workflows/build-test.yml
     with:
@@ -69,7 +68,9 @@ jobs:
       matrix:
         utility-project-name:
           - SmingCode.Utilities.Kafka.Host
+          - SmingCode.Utilities.Kafka.Retries
           - SmingCode.Utilities.ProcessTracking.Kafka
+          - SmingCode.Utilities.ProcessTracking.WebApi
     needs: [ get-version-no, build-test-publish-2 ]
     uses: ./.github/workflows/build-test.yml
     with:

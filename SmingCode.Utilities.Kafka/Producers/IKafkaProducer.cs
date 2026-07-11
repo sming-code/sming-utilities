@@ -2,6 +2,13 @@ namespace SmingCode.Utilities.Kafka.Producers;
 
 public interface IKafkaProducer
 {
+    Task<bool> SendEvent(
+        string topic
+    );
+    Task<bool> SendEvent(
+        string topic,
+        HeaderCollection headers
+    );
     Task<bool> SendEvent<TValue>(
         string topic,
         TValue value
@@ -10,16 +17,16 @@ public interface IKafkaProducer
         string topic,
         TKey key,
         TValue value
-    ) where TValue : notnull;
+    ) where TKey : notnull where TValue : notnull;
     Task<bool> SendEvent<TValue>(
         string topic,
         TValue value,
-        Headers headers
+        HeaderCollection headers
     ) where TValue : notnull;
     Task<bool> SendEvent<TKey, TValue>(
         string topic,
         TKey key,
         TValue value,
-        Headers headers
-    ) where TValue : notnull;
+        HeaderCollection headers
+    ) where TKey : notnull where TValue : notnull;
 }

@@ -5,7 +5,7 @@ using Consumers;
 
 internal class KafkaHostedService(
     IEnumerable<IKafkaConsumerDefinition> kafkaConsumerDefinitions,
-    KafkaServerOptions _kafkaServerOptions,
+    KafkaOptions _kafkaOptions,
     IServiceProvider serviceProvider,
     ILogger<KafkaHostedService> _logger
 ) : BackgroundService
@@ -26,7 +26,7 @@ internal class KafkaHostedService(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _kafkaConsumers.ForEach(consumer => consumer.InitialiseEventConsumer(stoppingToken));
-        var livenessLogInterval = _kafkaServerOptions.LivenessLogIntervalSeconds * 1000;
+        var livenessLogInterval = _kafkaOptions.Server.LivenessLogIntervalSeconds * 1000;
 
         while (!stoppingToken.IsCancellationRequested)
         {
