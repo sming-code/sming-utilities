@@ -18,6 +18,7 @@ jobs:
       fail-fast: true
       matrix:
         utility-project-name:
+          - SmingCode.Utilities.AppConfiguration
           - SmingCode.Utilities.Data
           - SmingCode.Utilities.DelegateInvokers
           - SmingCode.Utilities.Logging.AspNetCore

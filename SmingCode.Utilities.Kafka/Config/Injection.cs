@@ -4,10 +4,14 @@ using Microsoft.Extensions.Configuration;
 namespace SmingCode.Utilities.Kafka.Config;
 using Consumers;
 using Producers;
-using SmingCode.Utilities.StartupProcesses;
+
+using StartupProcesses;
 
 public static class Injection
 {
+    private static readonly string _bootstrapServersConfigEntryName = "Kafka:BootstrapServers";
+    private static readonly string _securityProtocolConfigEntryName = "Kafka:SecurityProtocol";
+
     public static IKafkaConsumerDefinition MapConsumer(
         this IServiceCollection services,
         string topicToMatch,
@@ -43,10 +47,20 @@ public static class Injection
         bool includeConsumers = false
     )
     {
-        var kafkaOptions = configuration.GetRequiredSection("Kafka")
-            .Get<KafkaOptions>()
-            ?? throw new InvalidOperationException("No valid kafka configuration section found.");
+        var bootstrapServers = configuration.GetValue<string>(_bootstrapServersConfigEntryName)
+            ?? throw new InvalidOperationException($"Could not find the configuration entry {_bootstrapServersConfigEntryName}.");
+        var securityProtocol = configuration.GetValue<string>(_securityProtocolConfigEntryName)
+            ?? throw new InvalidOperationException($"Could not find the configuration entry {_securityProtocolConfigEntryName}.");
+        var kafkaOptions = new KafkaOptions
+        {
+            Server = new KafkaServerOptions
+            {
+                BootstrapServers = bootstrapServers,
+                SecurityProtocol = securityProtocol
+            }
+        };
         services.AddSingleton(kafkaOptions);
+
         services.AddSingleton<IAdminClientProvider, AdminClientProvider>();
         services.AddSingleton<ITopicManager, TopicManager>();
         services.AddScoped<IKafkaProducer, KafkaProducer>();
