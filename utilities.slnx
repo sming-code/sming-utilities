@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="SmingCode.Utilities.AppConfiguration/SmingCode.Utilities.AppConfiguration.csproj" />
   <Project Path="SmingCode.Utilities.Data/SmingCode.Utilities.Data.csproj" />
   <Project Path="SmingCode.Utilities.DelegateInvokers.Tests/SmingCode.Utilities.DelegateInvokers.Tests.csproj" />
   <Project Path="SmingCode.Utilities.DelegateInvokers/SmingCode.Utilities.DelegateInvokers.csproj" />
