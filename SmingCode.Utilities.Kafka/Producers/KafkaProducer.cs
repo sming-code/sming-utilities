@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace SmingCode.Utilities.Kafka.Producers;
 

@@ -1,21 +1,15 @@
-using System.Reflection;
-
 namespace SmingCode.Utilities.DelegateInvokers;
 
-public interface IDelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
+public interface IDelegateActionInvoker<TIn1, TIn2, TIn3, TIn4>
 {
-    Task<TResult> Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4);
+    Task Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4);
 }
 
-public abstract class DelegateParameterBuilderBuilder<TIn1, TIn2, TIn3, TIn4>
+public static class DelegateActionInvoker<TIn1, TIn2, TIn3, TIn4>
 {
-    public abstract Func<TIn1, TIn2, TIn3, TIn4, TParam> BuildParameterBuilder<TParam>(ParameterInfo parameterInfo);
-}
-
-public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
-{
-    private static readonly Type _syncResultType = typeof(TResult);
-    private static readonly Type _asyncResultType = typeof(Task<>).MakeGenericType(typeof(TResult));
+    private static readonly Type _asyncResultType = typeof(Task);
+    private static readonly Type _parameterBuilderBuilderType = typeof(DelegateParameterBuilderBuilder<TIn1, TIn2, TIn3, TIn4>);
+    private static readonly string _buildParameterBuilderMethodName = nameof(DelegateParameterBuilderBuilder<,,,>.BuildParameterBuilder);
     private static readonly Dictionary<int, Type> _invokers = new()
     {
         { 0, typeof(Invoker) },
@@ -30,18 +24,18 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
         { 9, typeof(Invoker<,,,,,,,,>) }
     };
 
-    public static IDelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult> FromDelegate(
+    public static IDelegateActionInvoker<TIn1, TIn2, TIn3, TIn4> FromDelegate(
         Delegate @delegate,
         DelegateParameterBuilderBuilder<TIn1, TIn2, TIn3, TIn4> parameterBuilderBuilder
     )
     {
         var delegateGenericArguments = @delegate.GetType().GetGenericArguments();
-        var delegateResultType = delegateGenericArguments.Last();
-        if (delegateResultType != _syncResultType
+        var delegateResultType = delegateGenericArguments.LastOrDefault();
+        if (delegateResultType != null
             && delegateResultType != _asyncResultType)
         {
             throw new InvalidOperationException(
-                $"Response type of delegate must be either {_syncResultType.Name} or {_asyncResultType.Name}"
+                $"There should be no response type from an action delegate."
             );
         }
 
@@ -52,7 +46,7 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
         ))
         {
             throw new InvalidOperationException(
-                $"Delegate passed has too many parameters to be invoked by the DelegateInvoker."
+                $"Delegate passed has too many parameters to be invoked by the DelegateActionInvoker."
             );
         }
 
@@ -62,7 +56,6 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
             typeof(TIn2),
             typeof(TIn3),
             typeof(TIn4),
-            typeof(TResult),
             ..delegateMethodParameterInfos.Select(paramInfo => paramInfo.ParameterType)
         ];
         var invokerGenericType = invokerType.MakeGenericType(invokerTypeGenericArguments);
@@ -72,15 +65,15 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
             .. delegateMethodParameterInfos
                 .Select(parameter =>
                 {
-                    var parameterBuilderBuilderMethodCall = typeof(DelegateParameterBuilderBuilder<TIn1, TIn2, TIn3, TIn4>)
-                        .GetMethod(nameof(DelegateParameterBuilderBuilder<TIn1, TIn2, TIn3, TIn4>.BuildParameterBuilder))!
+                    var parameterBuilderBuilderMethodCall = _parameterBuilderBuilderType
+                        .GetMethod(_buildParameterBuilderMethodName)!
                         .MakeGenericMethod(parameter.ParameterType);
 
                     return parameterBuilderBuilderMethodCall.Invoke(parameterBuilderBuilder, [ parameter ])!;
                 })
         ];
 
-        return (IDelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>)Activator.CreateInstance(
+        return (IDelegateActionInvoker<TIn1, TIn2, TIn3, TIn4>)Activator.CreateInstance(
             invokerGenericType,
             invokerConstructorParams
         )!;
@@ -89,13 +82,13 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
     internal class Invoker(
         Delegate @delegate,
         bool isAsyncDelegate
-    ) : IDelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
+    ) : IDelegateActionInvoker<TIn1, TIn2, TIn3, TIn4>
     {
-        private readonly Func<Task<TResult>> _func = isAsyncDelegate
-            ? (Func<Task<TResult>>)@delegate
-            : async () => await Task.FromResult(((Func<TResult>)@delegate)());
+        private readonly Func<Task> _func = isAsyncDelegate
+            ? (Func<Task>)@delegate
+            : async () => await Task.Run(() => ((Action)@delegate)());
 
-        public async Task<TResult> Invoke(TIn1 _, TIn2 __, TIn3 ___, TIn4 ____)
+        public async Task Invoke(TIn1 _, TIn2 __, TIn3 ___, TIn4 ____)
             => await _func();
     }
 
@@ -103,13 +96,13 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
         Delegate @delegate,
         bool isAsyncDelegate,
         Func<TIn1, TIn2, TIn3, TIn4, TParam> _paramBuilder
-    ) : IDelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
+    ) : IDelegateActionInvoker<TIn1, TIn2, TIn3, TIn4>
     {
-        private readonly Func<TParam, Task<TResult>> _func = isAsyncDelegate
-            ? (Func<TParam, Task<TResult>>)@delegate
-            : async (param) => await Task.FromResult(((Func<TParam, TResult>)@delegate)(param));
+        private readonly Func<TParam, Task> _func = isAsyncDelegate
+            ? (Func<TParam, Task>)@delegate
+            : async (param) => await Task.Run(() => ((Action<TParam>)@delegate)(param));
 
-        public async Task<TResult> Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
+        public async Task Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
             => await _func(_paramBuilder(input1, input2, input3, input4));
     }
 
@@ -118,13 +111,13 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
         bool isAsyncDelegate,
         Func<TIn1, TIn2, TIn3, TIn4, TParam1> _paramBuilder1,
         Func<TIn1, TIn2, TIn3, TIn4, TParam2> _paramBuilder2
-    ) : IDelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
+    ) : IDelegateActionInvoker<TIn1, TIn2, TIn3, TIn4>
     {
-        private readonly Func<TParam1, TParam2, Task<TResult>> _func = isAsyncDelegate
-            ? (Func<TParam1, TParam2, Task<TResult>>)@delegate
-            : async (param1, param2) => await Task.FromResult(((Func<TParam1, TParam2, TResult>)@delegate)(param1, param2));
+        private readonly Func<TParam1, TParam2, Task> _func = isAsyncDelegate
+            ? (Func<TParam1, TParam2, Task>)@delegate
+            : async (param1, param2) => await Task.Run(() => ((Action<TParam1, TParam2>)@delegate)(param1, param2));
 
-        public async Task<TResult> Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
+        public async Task Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
             => await _func(
                 _paramBuilder1(input1, input2, input3, input4),
                 _paramBuilder2(input1, input2, input3, input4)
@@ -137,19 +130,19 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
         Func<TIn1, TIn2, TIn3, TIn4, TParam1> _paramBuilder1,
         Func<TIn1, TIn2, TIn3, TIn4, TParam2> _paramBuilder2,
         Func<TIn1, TIn2, TIn3, TIn4, TParam3> _paramBuilder3
-    ) : IDelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
+    ) : IDelegateActionInvoker<TIn1, TIn2, TIn3, TIn4>
     {
-        private readonly Func<TParam1, TParam2, TParam3, Task<TResult>> _func = isAsyncDelegate
-            ? (Func<TParam1, TParam2, TParam3, Task<TResult>>)@delegate
-            : async (param1, param2, param3) => await Task.FromResult(
-                ((Func<TParam1, TParam2, TParam3, TResult>)@delegate)(
+        private readonly Func<TParam1, TParam2, TParam3, Task> _func = isAsyncDelegate
+            ? (Func<TParam1, TParam2, TParam3, Task>)@delegate
+            : async (param1, param2, param3) => await Task.Run(() => 
+                ((Action<TParam1, TParam2, TParam3>)@delegate)(
                     param1,
                     param2,
                     param3
                 )
             );
 
-        public async Task<TResult> Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
+        public async Task Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
             => await _func(
                 _paramBuilder1(input1, input2, input3, input4),
                 _paramBuilder2(input1, input2, input3, input4),
@@ -164,12 +157,12 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
         Func<TIn1, TIn2, TIn3, TIn4, TParam2> _paramBuilder2,
         Func<TIn1, TIn2, TIn3, TIn4, TParam3> _paramBuilder3,
         Func<TIn1, TIn2, TIn3, TIn4, TParam4> _paramBuilder4
-    ) : IDelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
+    ) : IDelegateActionInvoker<TIn1, TIn2, TIn3, TIn4>
     {
-        private readonly Func<TParam1, TParam2, TParam3, TParam4, Task<TResult>> _func = isAsyncDelegate
-            ? (Func<TParam1, TParam2, TParam3, TParam4, Task<TResult>>)@delegate
-            : async (param1, param2, param3, param4) => await Task.FromResult(
-                ((Func<TParam1, TParam2, TParam3, TParam4, TResult>)@delegate)(
+        private readonly Func<TParam1, TParam2, TParam3, TParam4, Task> _func = isAsyncDelegate
+            ? (Func<TParam1, TParam2, TParam3, TParam4, Task>)@delegate
+            : async (param1, param2, param3, param4) => await Task.Run(() => 
+                ((Action<TParam1, TParam2, TParam3, TParam4>)@delegate)(
                     param1,
                     param2,
                     param3,
@@ -177,7 +170,7 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
                 )
             );
 
-        public async Task<TResult> Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
+        public async Task Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
             => await _func(
                 _paramBuilder1(input1, input2, input3, input4),
                 _paramBuilder2(input1, input2, input3, input4),
@@ -194,12 +187,12 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
         Func<TIn1, TIn2, TIn3, TIn4, TParam3> _paramBuilder3,
         Func<TIn1, TIn2, TIn3, TIn4, TParam4> _paramBuilder4,
         Func<TIn1, TIn2, TIn3, TIn4, TParam5> _paramBuilder5
-    ) : IDelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
+    ) : IDelegateActionInvoker<TIn1, TIn2, TIn3, TIn4>
     {
-        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, Task<TResult>> _func = isAsyncDelegate
-            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, Task<TResult>>)@delegate
-            : async (param1, param2, param3, param4, param5) => await Task.FromResult(
-                ((Func<TParam1, TParam2, TParam3, TParam4, TParam5, TResult>)@delegate)(
+        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, Task> _func = isAsyncDelegate
+            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, Task>)@delegate
+            : async (param1, param2, param3, param4, param5) => await Task.Run(() => 
+                ((Action<TParam1, TParam2, TParam3, TParam4, TParam5>)@delegate)(
                     param1,
                     param2,
                     param3,
@@ -208,7 +201,7 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
                 )
             );
 
-        public async Task<TResult> Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
+        public async Task Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
             => await _func(
                 _paramBuilder1(input1, input2, input3, input4),
                 _paramBuilder2(input1, input2, input3, input4),
@@ -227,12 +220,12 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
         Func<TIn1, TIn2, TIn3, TIn4, TParam4> _paramBuilder4,
         Func<TIn1, TIn2, TIn3, TIn4, TParam5> _paramBuilder5,
         Func<TIn1, TIn2, TIn3, TIn4, TParam6> _paramBuilder6
-    ) : IDelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
+    ) : IDelegateActionInvoker<TIn1, TIn2, TIn3, TIn4>
     {
-        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, Task<TResult>> _func = isAsyncDelegate
-            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, Task<TResult>>)@delegate
-            : async (param1, param2, param3, param4, param5, param6) => await Task.FromResult(
-                ((Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TResult>)@delegate)(
+        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, Task> _func = isAsyncDelegate
+            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, Task>)@delegate
+            : async (param1, param2, param3, param4, param5, param6) => await Task.Run(() => 
+                ((Action<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6>)@delegate)(
                     param1,
                     param2,
                     param3,
@@ -242,7 +235,7 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
                 )
             );
 
-        public async Task<TResult> Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
+        public async Task Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
             => await _func(
                 _paramBuilder1(input1, input2, input3, input4),
                 _paramBuilder2(input1, input2, input3, input4),
@@ -263,12 +256,12 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
         Func<TIn1, TIn2, TIn3, TIn4, TParam5> _paramBuilder5,
         Func<TIn1, TIn2, TIn3, TIn4, TParam6> _paramBuilder6,
         Func<TIn1, TIn2, TIn3, TIn4, TParam7> _paramBuilder7
-    ) : IDelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
+    ) : IDelegateActionInvoker<TIn1, TIn2, TIn3, TIn4>
     {
-        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, Task<TResult>> _func = isAsyncDelegate
-            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, Task<TResult>>)@delegate
-            : async (param1, param2, param3, param4, param5, param6, param7) => await Task.FromResult(
-                ((Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TResult>)@delegate)(
+        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, Task> _func = isAsyncDelegate
+            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, Task>)@delegate
+            : async (param1, param2, param3, param4, param5, param6, param7) => await Task.Run(() => 
+                ((Action<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7>)@delegate)(
                     param1,
                     param2,
                     param3,
@@ -279,7 +272,7 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
                 )
             );
 
-        public async Task<TResult> Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
+        public async Task Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
             => await _func(
                 _paramBuilder1(input1, input2, input3, input4),
                 _paramBuilder2(input1, input2, input3, input4),
@@ -302,12 +295,12 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
         Func<TIn1, TIn2, TIn3, TIn4, TParam6> _paramBuilder6,
         Func<TIn1, TIn2, TIn3, TIn4, TParam7> _paramBuilder7,
         Func<TIn1, TIn2, TIn3, TIn4, TParam8> _paramBuilder8
-    ) : IDelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
+    ) : IDelegateActionInvoker<TIn1, TIn2, TIn3, TIn4>
     {
-        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, Task<TResult>> _func = isAsyncDelegate
-            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, Task<TResult>>)@delegate
-            : async (param1, param2, param3, param4, param5, param6, param7, param8) => await Task.FromResult(
-                ((Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, TResult>)@delegate)(
+        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, Task> _func = isAsyncDelegate
+            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, Task>)@delegate
+            : async (param1, param2, param3, param4, param5, param6, param7, param8) => await Task.Run(() => 
+                ((Action<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8>)@delegate)(
                     param1,
                     param2,
                     param3,
@@ -319,7 +312,7 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
                 )
             );
 
-        public async Task<TResult> Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
+        public async Task Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
             => await _func(
                 _paramBuilder1(input1, input2, input3, input4),
                 _paramBuilder2(input1, input2, input3, input4),
@@ -344,12 +337,12 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
         Func<TIn1, TIn2, TIn3, TIn4, TParam7> _paramBuilder7,
         Func<TIn1, TIn2, TIn3, TIn4, TParam8> _paramBuilder8,
         Func<TIn1, TIn2, TIn3, TIn4, TParam9> _paramBuilder9
-    ) : IDelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
+    ) : IDelegateActionInvoker<TIn1, TIn2, TIn3, TIn4>
     {
-        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, TParam9, Task<TResult>> _func = isAsyncDelegate
-            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, TParam9, Task<TResult>>)@delegate
-            : async (param1, param2, param3, param4, param5, param6, param7, param8, param9) => await Task.FromResult(
-                ((Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, TParam9, TResult>)@delegate)(
+        private readonly Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, TParam9, Task> _func = isAsyncDelegate
+            ? (Func<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, TParam9, Task>)@delegate
+            : async (param1, param2, param3, param4, param5, param6, param7, param8, param9) => await Task.Run(() => 
+                ((Action<TParam1, TParam2, TParam3, TParam4, TParam5, TParam6, TParam7, TParam8, TParam9>)@delegate)(
                     param1,
                     param2,
                     param3,
@@ -362,7 +355,7 @@ public static class DelegateInvoker<TIn1, TIn2, TIn3, TIn4, TResult>
                 )
             );
 
-        public async Task<TResult> Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
+        public async Task Invoke(TIn1 input1, TIn2 input2, TIn3 input3, TIn4 input4)
             => await _func(
                 _paramBuilder1(input1, input2, input3, input4),
                 _paramBuilder2(input1, input2, input3, input4),

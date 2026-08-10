@@ -5,7 +5,7 @@ using DelegateInvokers;
 
 internal class KafkaDelegateInvoker<TKey, TValue>
 {
-    private readonly IDelegateInvoker<IServiceProvider, KafkaConsumerContext, KafkaEventResult> _invoker;
+    private readonly IDelegateFuncInvoker<IServiceProvider, KafkaConsumerContext, KafkaEventResult> _invoker;
 
     internal class ParameterBuilderBuilder : DelegateParameterBuilderBuilder<IServiceProvider, KafkaConsumerContext>
     {
@@ -40,7 +40,7 @@ internal class KafkaDelegateInvoker<TKey, TValue>
 
     internal KafkaDelegateInvoker(
         Delegate @delegate
-    ) => _invoker = DelegateInvoker<IServiceProvider, KafkaConsumerContext, KafkaEventResult>.FromDelegate(
+    ) => _invoker = DelegateFuncInvoker<IServiceProvider, KafkaConsumerContext, KafkaEventResult>.FromDelegate(
         @delegate,
         new ParameterBuilderBuilder()
     );
