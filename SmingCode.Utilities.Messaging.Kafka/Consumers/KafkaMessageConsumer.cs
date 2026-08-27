@@ -4,6 +4,15 @@ namespace SmingCode.Utilities.Messaging.Kafka.Consumers;
 using Config;
 using ServiceMetadata;
 
+internal interface IKafkaMessageConsumer : IMessageConsumer
+{
+    Task PauseTopicPartition(
+        string topicName,
+        int partitionNo,
+        TimeSpan delay
+    );
+}
+
 internal class KafkaMessageConsumer<TBody>(
     IServiceScopeFactory _serviceScopeFactory,
     IKafkaAdminClient _kafkaAdminClient,
@@ -13,7 +22,7 @@ internal class KafkaMessageConsumer<TBody>(
     ConsumerMiddlewareHandler middlewareHandler,
     KafkaConsumerPrerequisiteOptions _preRequisiteOptions,
     ILogger<KafkaMessageConsumer<TBody>> _logger
-) : IMessageConsumer
+) : IKafkaMessageConsumer
     where TBody : notnull
 {
     private IConsumer<string, string> _consumer = null!;
