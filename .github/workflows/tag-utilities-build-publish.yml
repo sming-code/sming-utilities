@@ -21,9 +21,12 @@ jobs:
           - SmingCode.Utilities.AppConfiguration
           - SmingCode.Utilities.Data
           - SmingCode.Utilities.DelegateInvokers
+          - SmingCode.Utilities.Exceptions
           - SmingCode.Utilities.Logging.AspNetCore
           - SmingCode.Utilities.Logging.Worker
+          - SmingCode.Utilities.Messaging.MinimalConsumers
           - SmingCode.Utilities.MinimalApi
+          - SmingCode.Utilities.Nullability
           - SmingCode.Utilities.ServiceMetadata
           - SmingCode.Utilities.StartupProcesses
           - SmingCode.Utilities.Testing.AutoDomainData
@@ -38,6 +41,8 @@ jobs:
       fail-fast: true
       matrix:
         utility-project-name:
+          - SmingCode.Utilities.Exceptions.ApiHandling
+          - SmingCode.Utilities.Messaging
           - SmingCode.Utilities.ServiceApiClient
           - SmingCode.Utilities.ServiceMetadata.WebApplicationStartup
           - SmingCode.Utilities.StartupProcesses.AspNetCore
@@ -52,8 +57,10 @@ jobs:
       fail-fast: true
       matrix:
         utility-project-name:
-          - SmingCode.Utilities.Kafka
-          - SmingCode.Utilities.Kafka.MinimalConsumers
+          - SmingCode.Utilities.Messaging.Host
+          - SmingCode.Utilities.Messaging.Kafka
+          - SmingCode.Utilities.Messaging.MinimalConsumers
+          - SmingCode.Utilities.Messaging.Retries
           - SmingCode.Utilities.ProcessTracking
           - SmingCode.Utilities.ServiceApiClient.MsalOAuth
           - SmingCode.Utilities.ServiceApiClient.TagApimConfiguration
@@ -68,9 +75,8 @@ jobs:
       fail-fast: true
       matrix:
         utility-project-name:
-          - SmingCode.Utilities.Kafka.Host
-          - SmingCode.Utilities.Kafka.Retries
-          - SmingCode.Utilities.ProcessTracking.Kafka
+          - SmingCode.Utilities.Messaging.Retries.Kafka
+          - SmingCode.Utilities.ProcessTracking.Messaging
           - SmingCode.Utilities.ProcessTracking.WebApi
     needs: [ get-version-no, build-test-publish-2 ]
     uses: ./.github/workflows/build-test.yml

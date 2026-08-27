@@ -1,4 +1,4 @@
-using Azure.Identity;
+using Azure.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Configuration.AzureAppConfiguration;
 
@@ -10,7 +10,8 @@ public static class Injection
     private static readonly string _tagEnvironmentConfigEntryName = "Tag_Environment";
 
     public static ConfigurationManager ConnectToAppConfiguration(
-        this ConfigurationManager configurationManager
+        this ConfigurationManager configurationManager,
+        TokenCredential appTokenCredential
     )
     {
         var appConfigurationEndpoint = configurationManager.GetValue<string>(_appConfigurationEndpointConfigEntryName)
@@ -22,7 +23,7 @@ public static class Injection
             azureAppConfigurationOptions
                 .Connect(
                     new Uri(appConfigurationEndpoint),
-                    new DefaultAzureCredential()
+                    appTokenCredential
                 )
                 .Select(KeyFilter.Any, LabelFilter.Null)
                 .Select(KeyFilter.Any, appConfigurationLabel)
