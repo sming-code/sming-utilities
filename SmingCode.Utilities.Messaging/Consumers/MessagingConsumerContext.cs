@@ -3,7 +3,7 @@ namespace SmingCode.Utilities.Messaging.Consumers;
 public class MessagingConsumerContext
 {
     internal MessagingConsumerContext(
-        IMessageConsumer parentMessageConsumer,
+        IMessageConsumer consumer,
         string topicConsumed,
         MetadataCollection metadataCollection,
         object? value,
@@ -11,10 +11,10 @@ public class MessagingConsumerContext
         ICustomPropertyHandler customPropertyHandler,
         Func<MessagingConsumerContext, Task> messageConsumer,
         IServiceProvider serviceProvider
-    ) => (ParentMessageConsumer, TopicConsumed, MetadataCollection, Value, ValueType, CustomPropertyHandler, MessageConsumer, ServiceProvider)
-            = (parentMessageConsumer, topicConsumed, metadataCollection, value, valueType, customPropertyHandler, messageConsumer, serviceProvider);
+    ) => (Consumer, TopicConsumed, MetadataCollection, Value, ValueType, CustomPropertyHandler, MessageConsumer, ServiceProvider)
+            = (consumer, topicConsumed, metadataCollection, value, valueType, customPropertyHandler, messageConsumer, serviceProvider);
 
-    internal IMessageConsumer ParentMessageConsumer { get; }
+    internal IMessageConsumer Consumer { get; }
     internal IServiceProvider ServiceProvider { get; }
     internal Func<MessagingConsumerContext, Task> MessageConsumer { get; }
 

@@ -1,10 +1,11 @@
 using System.Reflection;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
 
 namespace SmingCode.Utilities.Messaging.Config;
 using Consumers;
 using Producers;
-using SmingCode.Utilities.StartupProcesses;
+using StartupProcesses;
 
 public static class Injection
 {
@@ -16,7 +17,7 @@ public static class Injection
     {
         var handlerMethodParameters = handler.Method.GetParameters();
         var consumerBodyType = handlerMethodParameters
-            .SingleOrDefault(parameter => parameter.GetCustomAttribute<FromBodyAttribute>() is not null)
+            .SingleOrDefault(parameter => parameter.GetCustomAttribute<FromMessageBodyAttribute>() is not null)
                 ?.ParameterType
                 ?? typeof(string);
 
@@ -35,21 +36,39 @@ public static class Injection
 
     public static IServiceCollection InitializeMessageHandling(
         this IServiceCollection services,
-        bool includeConsumers,
+        IConfiguration configuration,
         Action<IMessageHandlingConfigurationBuilder> configurationBuilder
     )
     {
         var messageHandlingConfigurationBuilder = new MessageHandlingConfigurationBuilder(
+            configuration,
             services
         );
 
         configurationBuilder(messageHandlingConfigurationBuilder);
         
-        services.AddSingleton<ProducerMiddlewareHandler>();
-        services.AddScoped<IServiceInitializer, MessagingProducerMiddlewareInitialization>();
-
-        if (includeConsumers)
+        if (messageHandlingConfigurationBuilder.ProducersInitialised)
         {
+            services.AddSingleton<ProducerMiddlewareHandler>();
+            services.AddScoped<IServiceInitializer, MessagingProducerMiddlewareInitialization>();
+        }
+
+        if (messageHandlingConfigurationBuilder.ConsumersInitialised)
+        {
+            if (!services.Any(st =>
+                st.ServiceType.Name == nameof(IHostedService)
+                && st.ImplementationType is not null
+                && st.ImplementationType.Name == nameof(MessagingHostedService))
+            )
+            {
+                var messagingOptions = configuration.GetRequiredSection("HostedServiceOptions")
+                    .Get<HostedServiceOptions>()
+                    ?? new();
+                
+                services.AddSingleton(messagingOptions);
+                services.AddHostedService<MessagingHostedService>();
+            }
+            
             services.AddSingleton<ConsumerMiddlewareHandler>();
             services.AddScoped<IServiceInitializer, MessagingConsumerMiddlewareInitialization>();
         }

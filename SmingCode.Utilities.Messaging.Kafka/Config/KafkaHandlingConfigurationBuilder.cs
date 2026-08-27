@@ -2,23 +2,11 @@ namespace SmingCode.Utilities.Messaging.Kafka.Config;
 using Consumers;
 using Producers;
 
-public interface IKafkaHandlingConfigurationBuilder
-{
-    IKafkaHandlingConfigurationBuilder AddKafkaConsumers();
-    IKafkaHandlingConfigurationBuilder UseKafkaProducer();
-}
-
-internal interface IKafkaHandlingConfigurationBuilderInternal
-{
-    IServiceCollection Services { get; }
-    IKafkaHandlingConfigurationBuilder WithGlobalPreInitProcessHandler<IHandler>()
-        where IHandler : IKafkaConsumerPreInitProcessHandler;
-}
-
 internal class KafkaHandlingConfigurationBuilder(
+    IMessageHandlingConfigurationBuilderInternal _messageHandlingConfigurationBuilder,
     IServiceCollection services,
     TopicPartitionerFactory _topicPartitionerFactory,
-    KafkaPreInitProcessHandlerOptions _preInitProcessHandlerOptions
+    KafkaConsumerPrerequisiteOptions _preInitProcessHandlerOptions
 ) : IKafkaHandlingConfigurationBuilder, IKafkaHandlingConfigurationBuilderInternal
 {
     public IServiceCollection Services { get; } = services;
@@ -26,6 +14,7 @@ internal class KafkaHandlingConfigurationBuilder(
     public IKafkaHandlingConfigurationBuilder AddKafkaConsumers()
     {
         Services.AddSingleton<IMessageConsumerFactory, KafkaConsumerFactory>();
+        _messageHandlingConfigurationBuilder.SetConsumersInitialised();
 
         return this;
     }
@@ -39,14 +28,15 @@ internal class KafkaHandlingConfigurationBuilder(
 
         Services.AddScoped<IMessagingProducer, KafkaProducer>();
         Services.AddSingleton<IKafkaProducerBuilder, KafkaProducerBuilder>();
+        _messageHandlingConfigurationBuilder.SetProvidersInitialised();
 
         return this;
     }
 
-    public IKafkaHandlingConfigurationBuilder WithGlobalPreInitProcessHandler<IHandler>()
+    public IKafkaHandlingConfigurationBuilder WithGlobalPrerequisiteHandler<IHandler>()
         where IHandler : IKafkaConsumerPreInitProcessHandler
     {
-        _preInitProcessHandlerOptions.GlobalPreInitProcessHandlers.Add(typeof(IHandler));
+        _preInitProcessHandlerOptions.GlobalPrerequisiteHandlers.Add(typeof(IHandler));
 
         return this;
     }
@@ -61,38 +51,18 @@ internal class KafkaHandlingConfigurationBuilder(
     }
 }
 
-internal class KafkaPreInitProcessHandlerOptions
+public interface IKafkaConsumerHandlingConfigurationBuilder
 {
-    private readonly Dictionary<Guid, List<Type>> _consumerSpecificPreInitProcessHandlers = [];
-    internal List<Type> GlobalPreInitProcessHandlers { get; private set; } = [];
+    
+}
 
-    internal void AddGlobalPreInitProcessHandler<IHandler>() => GlobalPreInitProcessHandlers = [
-        .. GlobalPreInitProcessHandlers,
-        typeof(IHandler)
-    ];
+internal class KafkaConsumerHandlingConfigurationBuilder
+    : IKafkaConsumerHandlingConfigurationBuilder
+{
+    
+}
 
-    internal void AddConsumerSpecificPreInitProcessHandler<IHandler>(Guid consumerId)
-    {
-        if (_consumerSpecificPreInitProcessHandlers.TryGetValue(
-            consumerId,
-            out var consumerSpecificPreInitHandlers
-        ))
-        {
-            consumerSpecificPreInitHandlers.Add(typeof(IHandler));
-        }
-        else
-        {
-            _consumerSpecificPreInitProcessHandlers.Add(
-                consumerId,
-                [ typeof(IHandler) ]
-            );
-        }
-    }
-
-    internal List<Type> GetConsumerSpecificPreInitProcessHandlers(
-        Guid consumerId
-    ) => _consumerSpecificPreInitProcessHandlers.TryGetValue(
-        consumerId,
-        out var matched
-    ) ? matched : [];
+public interface IKafkaProviderHandlingConfigurationBuilder
+{
+    
 }

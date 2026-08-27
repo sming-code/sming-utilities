@@ -11,7 +11,7 @@ internal class KafkaMessageConsumer<TBody>(
     IServiceMetadataProvider serviceMetadataProvider,
     KafkaOptions _kafkaOptions,
     ConsumerMiddlewareHandler middlewareHandler,
-    KafkaPreInitProcessHandlerOptions _preInitProcessHandlerOptions,
+    KafkaConsumerPrerequisiteOptions _preRequisiteOptions,
     ILogger<KafkaMessageConsumer<TBody>> _logger
 ) : IMessageConsumer
     where TBody : notnull
@@ -23,13 +23,13 @@ internal class KafkaMessageConsumer<TBody>(
 
     public Guid ConsumerId => _messagingConsumerDefinition.ConsumerId;
     
-    public void InitialiseEventConsumer(
+    public async Task InitialiseEventConsumer(
         CancellationToken cancellationToken
     )
     {
         List<Type> preInitProcessHandlers = [
-            .. _preInitProcessHandlerOptions.GlobalPreInitProcessHandlers,
-            .. _preInitProcessHandlerOptions.GetConsumerSpecificPreInitProcessHandlers(_messagingConsumerDefinition.ConsumerId)
+            .. _preRequisiteOptions.GlobalPrerequisiteHandlers,
+            .. _preRequisiteOptions.GetConsumerSpecificPrerequisiteHandlers(_messagingConsumerDefinition.ConsumerId)
         ];
 
         if (preInitProcessHandlers.Count is not 0)
@@ -45,6 +45,10 @@ internal class KafkaMessageConsumer<TBody>(
         }
 
         var topicToConsume = GetTopicToConsume();
+        if (!_messagingConsumerDefinition.UseRegexPatternMatching)
+        {
+            await _kafkaAdminClient.CreateTopic(topicToConsume);
+        }
         var clientGroupId = GetClientGroupId();
         _consumer = BuildConsumer(
             topicToConsume,

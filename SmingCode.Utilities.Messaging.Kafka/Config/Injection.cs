@@ -6,20 +6,20 @@ namespace SmingCode.Utilities.Messaging.Kafka.Config;
 public static class Injection
 {
     private static readonly TopicPartitionerFactory _topicPartitionerFactory = new();
-    private static readonly KafkaPreInitProcessHandlerOptions _preInitHandlerOptions = new();
+    private static readonly KafkaConsumerPrerequisiteOptions _preInitHandlerOptions = new();
 
     public static IMessageHandlingConfigurationBuilder UseKafka(
         this IMessageHandlingConfigurationBuilder configurationBuilder,
-        IConfiguration configuration,
         Action<IKafkaHandlingConfigurationBuilder> kafkaConfigurationBuilder
     )
     {
-        if (configurationBuilder is not MessageHandlingConfigurationBuilder concreteConfigurationBuilder)
+        if (configurationBuilder is not IMessageHandlingConfigurationBuilderInternal configurationBuilderInternal)
         {
             throw new Exception();
         }
 
-        var services = concreteConfigurationBuilder.Services;
+        var configuration = configurationBuilderInternal.Configuration;
+        var services = configurationBuilderInternal.Services;
 
         var kafkaOptions = configuration.GetRequiredSection("Kafka")
             .Get<KafkaOptions>()
@@ -31,6 +31,7 @@ public static class Injection
         services.AddSingleton(_topicPartitionerFactory);
 
         var kafkaHandlingConfigurationBuilder = new KafkaHandlingConfigurationBuilder(
+            configurationBuilderInternal,
             services,
             _topicPartitionerFactory,
             _preInitHandlerOptions

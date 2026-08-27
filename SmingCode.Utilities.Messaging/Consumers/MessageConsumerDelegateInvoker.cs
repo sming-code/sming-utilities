@@ -11,7 +11,7 @@ internal class MessageConsumerDelegateInvoker<TBody>
     {
         public override Func<IServiceProvider, MessagingConsumerContext, TParam> BuildParameterBuilder<TParam>(
             ParameterInfo parameterInfo
-        ) => parameterInfo.GetCustomAttribute<FromBodyAttribute>() is not null
+        ) => parameterInfo.GetCustomAttribute<FromMessageBodyAttribute>() is not null
                 ? (_, context) => context.Value is not null && context.Value is TParam tParamVal
                     ? tParamVal
                     : throw new InvalidCastException("Mismatched value type in kafka message handling")

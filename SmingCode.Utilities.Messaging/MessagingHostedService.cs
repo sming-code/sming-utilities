@@ -24,15 +24,10 @@ internal class MessagingHostedService(
         {
             if (_logger.IsEnabled(LogLevel.Information))
             {
-                _logger.LogInformation("Kafka consumers running at: {time}", DateTimeOffset.Now);
+                _logger.LogInformation("Message consumers running at: {time}", DateTimeOffset.Now);
             }
 
             await Task.Delay(livenessLogInterval, stoppingToken);
         }
     }
-}
-
-public class HostedServiceOptions
-{
-    public int LivenessLogIntervalSeconds { get; set; } = 30;
 }
