@@ -19,6 +19,7 @@ jobs:
       matrix:
         utility-project-name:
           - SmingCode.Utilities.AppConfiguration
+          - SmingCode.Utilities.AzureIdentity
           - SmingCode.Utilities.Data
           - SmingCode.Utilities.DelegateInvokers
           - SmingCode.Utilities.Exceptions
